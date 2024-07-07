@@ -122,6 +122,16 @@ var MASK = BUCKET_SIZE - 1;
 var MAX_INDEX_NODE = BUCKET_SIZE / 2;
 var MIN_ARRAY_NODE = BUCKET_SIZE / 4;
 
+// build/dev/javascript/gleam_stdlib/gleam_stdlib.mjs
+function identity(x) {
+  return x;
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
+function from(a2) {
+  return identity(a2);
+}
+
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
 function guard(requirement, consequence, alternative) {
   if (requirement) {
@@ -161,6 +171,28 @@ var Element = class extends CustomType {
     this.void = void$;
   }
 };
+var Attribute = class extends CustomType {
+  constructor(x0, x1, as_property) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+    this.as_property = as_property;
+  }
+};
+
+// build/dev/javascript/lustre/lustre/attribute.mjs
+function attribute(name, value) {
+  return new Attribute(name, from(value), false);
+}
+function class$(name) {
+  return attribute("class", name);
+}
+function href(uri) {
+  return attribute("href", uri);
+}
+function target(target2) {
+  return attribute("target", target2);
+}
 
 // build/dev/javascript/lustre/lustre/element.mjs
 function element(tag, attrs, children) {
@@ -282,7 +314,7 @@ function createElementNode({ prev, next, dispatch, stack }) {
     handlersForEl = registeredHandlers.get(el2);
   }
   const prevHandlers = canMorph ? new Set(handlersForEl.keys()) : null;
-  const prevAttributes = canMorph ? new Set(Array.from(prev.attributes, (a) => a.name)) : null;
+  const prevAttributes = canMorph ? new Set(Array.from(prev.attributes, (a2) => a2.name)) : null;
   let className = null;
   let style = null;
   let innerHTML = null;
@@ -390,14 +422,14 @@ function createElementNode({ prev, next, dispatch, stack }) {
 }
 var registeredHandlers = /* @__PURE__ */ new WeakMap();
 function lustreGenericEventHandler(event) {
-  const target = event.currentTarget;
-  if (!registeredHandlers.has(target)) {
-    target.removeEventListener(event.type, lustreGenericEventHandler);
+  const target2 = event.currentTarget;
+  if (!registeredHandlers.has(target2)) {
+    target2.removeEventListener(event.type, lustreGenericEventHandler);
     return;
   }
-  const handlersForEventTarget = registeredHandlers.get(target);
+  const handlersForEventTarget = registeredHandlers.get(target2);
   if (!handlersForEventTarget.has(event.type)) {
-    target.removeEventListener(event.type, lustreGenericEventHandler);
+    target2.removeEventListener(event.type, lustreGenericEventHandler);
     return;
   }
   handlersForEventTarget.get(event.type)(event);
@@ -667,11 +699,17 @@ function start3(app, selector, flags) {
 }
 
 // build/dev/javascript/lustre/lustre/element/html.mjs
+function h1(attrs, children) {
+  return element("h1", attrs, children);
+}
 function div(attrs, children) {
   return element("div", attrs, children);
 }
 function p(attrs, children) {
   return element("p", attrs, children);
+}
+function a(attrs, children) {
+  return element("a", attrs, children);
 }
 
 // build/dev/javascript/web/web.mjs
@@ -681,10 +719,68 @@ function init2(_) {
 function update2(model, _) {
   return model;
 }
+function mk_link(link, link_text) {
+  return a(
+    toList([
+      class$("text-blue-600 visited:text-purple-600"),
+      target("_blank"),
+      href(link)
+    ]),
+    toList([text(link_text)])
+  );
+}
 function view(_) {
   return div(
-    toList([]),
-    toList([p(toList([]), toList([text("Fabien website")]))])
+    toList([class$("flex flex-row justify-center")]),
+    toList([
+      div(
+        toList([class$("basis-10/12")]),
+        toList([
+          div(
+            toList([class$("w-full max-w-5xl mx-auto")]),
+            toList([
+              div(
+                toList([class$("grid pt-2 pb-6 justify-items-center")]),
+                toList([
+                  h1(
+                    toList([class$("text-2xl font-bold")]),
+                    toList([text("Welcome on my web page")])
+                  )
+                ])
+              ),
+              div(
+                toList([class$("grid gap-2")]),
+                toList([
+                  p(
+                    toList([]),
+                    toList([
+                      text(
+                        "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer."
+                      )
+                    ])
+                  ),
+                  p(
+                    toList([]),
+                    toList([
+                      text(
+                        "At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and"
+                      ),
+                      mk_link("https://www.rdoproject.org", " RDO"),
+                      text(". "),
+                      text(
+                        "My daily duty is maintaining the CI infrastucture based on"
+                      ),
+                      mk_link("https://zuul-ci.org/", " Zuul"),
+                      text(". ")
+                    ])
+                  )
+                ])
+              )
+            ])
+          )
+        ])
+      )
+    ])
   );
 }
 function main() {
@@ -694,7 +790,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      7,
+      8,
       "main",
       "Assignment pattern did not match",
       { value: $ }
