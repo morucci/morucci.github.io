@@ -773,6 +773,17 @@ function view(_) {
                       mk_link("https://zuul-ci.org/", " Zuul"),
                       text(". ")
                     ])
+                  ),
+                  p(
+                    toList([]),
+                    toList([
+                      text("I contribute to"),
+                      mk_link(
+                        "/oss-contributions",
+                        " various Open Source projects "
+                      ),
+                      text("for work and during my free time.")
+                    ])
                   )
                 ])
               )

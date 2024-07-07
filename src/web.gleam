@@ -56,6 +56,11 @@ fn view(_model) {
             mk_link("https://zuul-ci.org/", " Zuul"),
             text(". "),
           ]),
+          p([], [
+            text("I contribute to"),
+            mk_link("/oss-contributions", " various Open Source projects "),
+            text("for work and during my free time."),
+          ]),
         ]),
       ]),
       // Set the title in a grid and use the grid centering parameter
