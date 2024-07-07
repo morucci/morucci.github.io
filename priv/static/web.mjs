@@ -1954,13 +1954,13 @@ function view(model) {
       div(
         toList([class$("basis-10/12")]),
         toList([
-          nav(
-            toList([class$("flex gap-2")]),
-            toList([mk_link("/", "Home"), mk_link("/projects", "Projects")])
-          ),
           div(
             toList([class$("w-full max-w-5xl mx-auto")]),
             toList([
+              nav(
+                toList([class$("flex gap-2")]),
+                toList([mk_link("/", "Home"), mk_link("/projects", "Projects")])
+              ),
               (() => {
                 if (model instanceof Model && model.route instanceof Home) {
                   return view_home(model);

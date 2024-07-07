@@ -95,11 +95,11 @@ fn view(model) {
   div([class("flex flex-row justify-center")], [
     // Ensure we are not using to full wide size
     div([class("basis-10/12")], [
-      nav([class("flex gap-2")], [
-        mk_link("/", "Home"),
-        mk_link("/projects", "Projects"),
-      ]),
       div([class("w-full max-w-5xl mx-auto")], [
+        nav([class("flex gap-2")], [
+          mk_link("/", "Home"),
+          mk_link("/projects", "Projects"),
+        ]),
         case model {
           Model(Home) -> view_home(model)
           Model(Projects) -> view_project(model)
