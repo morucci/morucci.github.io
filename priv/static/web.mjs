@@ -205,8 +205,21 @@ function graphemes_iterator(string2) {
 function split(xs, pattern) {
   return List.fromArray(xs.split(pattern));
 }
+function join(xs, separator) {
+  const iterator = xs[Symbol.iterator]();
+  let result = iterator.next().value || "";
+  let current = iterator.next();
+  while (!current.done) {
+    result = result + separator + current.value;
+    current = iterator.next();
+  }
+  return result;
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
+function join2(strings, separator) {
+  return join(strings, separator);
+}
 function split3(x, substring) {
   if (substring === "") {
     return graphemes(x);
@@ -970,6 +983,8 @@ var Home = class extends CustomType {
 };
 var Projects = class extends CustomType {
 };
+var Articles = class extends CustomType {
+};
 var OnRouteChange = class extends CustomType {
   constructor(x0) {
     super();
@@ -982,10 +997,31 @@ var Model = class extends CustomType {
     this.route = route;
   }
 };
+var GitHub = class extends CustomType {
+};
+var SF = class extends CustomType {
+};
+var Opendev = class extends CustomType {
+};
+var Pagure = class extends CustomType {
+};
+var Project = class extends CustomType {
+  constructor(name, ptype, desc, repo_url, langs, contrib_desc) {
+    super();
+    this.name = name;
+    this.ptype = ptype;
+    this.desc = desc;
+    this.repo_url = repo_url;
+    this.langs = langs;
+    this.contrib_desc = contrib_desc;
+  }
+};
 function uri_to_route(uri) {
   let $ = path_segments(uri.path);
   if ($.hasLength(1) && $.head === "projects") {
     return new Projects();
+  } else if ($.hasLength(1) && $.head === "articles") {
+    return new Articles();
   } else {
     return new Home();
   }
@@ -1063,7 +1099,103 @@ function view_home(_) {
     ])
   );
 }
-function view_project(_) {
+function view_project(project) {
+  return div(
+    toList([]),
+    toList([
+      div(
+        toList([class$("flex justify-between")]),
+        toList([
+          mk_link(project.repo_url, project.name),
+          div(
+            toList([]),
+            toList([
+              (() => {
+                let _pipe = project.langs;
+                let _pipe$1 = join2(_pipe, "/");
+                return text(_pipe$1);
+              })()
+            ])
+          )
+        ])
+      ),
+      div(
+        toList([class$("grid gap-1")]),
+        toList([
+          div(toList([]), toList([text(project.desc)])),
+          div(toList([]), toList([text(project.contrib_desc)]))
+        ])
+      )
+    ])
+  );
+}
+function view_projects(_) {
+  let main_projects = toList([
+    new Project(
+      "Monocle",
+      new GitHub(),
+      "Monocle is capable of indexing Pull-Requests, Merge-Requests and Gerrit reviews in order to provide development statistics and developer dashboards",
+      "https://github.com/change-metrics/monocle",
+      toList(["Haskell", "ReScript"]),
+      "I started this project and I'm on of the main contributors of this project. The project has been initially started in Python, then for the fun and with the help of a colleague we migrated the code to Haskell."
+    ),
+    new Project(
+      "RepoXplorer",
+      new GitHub(),
+      "Monocle provides statistics on Git repositories.",
+      "https://github.com/morucci/repoxplorer",
+      toList(["Python", "JavaScript"]),
+      "I started this project and was the main contribution on it"
+    ),
+    new Project(
+      "Software Factory",
+      new SF(),
+      " This project help us to maintain a development forge with Zuul as the main component for the CI/CD",
+      "https://www.softwarefactory-project.io",
+      toList(["Ansible", "Python"]),
+      "I'm working on this project with my co-workers. It is an infrastucture project and I used to provide improvements on the code base."
+    ),
+    new Project(
+      "SF Operator",
+      new GitHub(),
+      "This is an evolution of Software Factory made to be deployed on OpenShift or Vanilla Kubernetes. This k8s operator manages a Resource called Software Factory capable of deploying a CI/CD system based on Zuul",
+      "https://github.com/softwarefactory-project/sf-operator",
+      toList(["GO"]),
+      "I'm currently actively working on that project with the help of my co-workers."
+    ),
+    new Project(
+      "Zuul CI",
+      new Opendev(),
+      "This an Opendev's project initialy developed for the OpenStack project CI.",
+      "https://opendev.org/zuul/zuul",
+      toList(["Python", "TypeScript"]),
+      "I've contributed several improvment to Zuul, mainly the Git, Pagure, ElasticSearch and GitLab driver"
+    ),
+    new Project(
+      "HazardHunter",
+      new GitHub(),
+      "This is a MineSweeper like game.",
+      "https://github.com/web-apps-lab/HazardHunter",
+      toList(["Haskell", "HTMX"]),
+      "I'm the main developer of it. Wanted to challenge myself to leverage HTMX via ButlerOS."
+    ),
+    new Project(
+      "MemoryMaster",
+      new GitHub(),
+      "Memory Master is a Concentration card game.",
+      "https://github.com/web-apps-lab/MemoryMaster",
+      toList(["Haskell", "HTMX"]),
+      "I'm the main developer of it. A second game after HazardHunter and because this is fun to code."
+    ),
+    new Project(
+      "FM gateway",
+      new Pagure(),
+      "",
+      "https://pagure.io/fm-gateway",
+      toList(["Python"]),
+      ""
+    )
+  ]);
   return div(
     toList([]),
     toList([
@@ -1076,10 +1208,19 @@ function view_project(_) {
             toList([
               h2(
                 toList([class$("text-1xl font-bold")]),
-                toList([text("I am one of the main contributors on")])
+                toList([
+                  text(
+                    "I have significant contributions to the following projects"
+                  )
+                ])
               ),
-              div(toList([]), toList([text("Monocle")])),
-              div(toList([]), toList([text("Zuul")]))
+              div(
+                toList([class$("grid gap-2")]),
+                (() => {
+                  let _pipe = main_projects;
+                  return map(_pipe, view_project);
+                })()
+              )
             ])
           ),
           div(
@@ -1087,14 +1228,22 @@ function view_project(_) {
             toList([
               h2(
                 toList([class$("text-1xl font-bold")]),
-                toList([text("I did some contributions on")])
-              )
+                toList([
+                  text("I did some contributions to the following projects")
+                ])
+              ),
+              div(toList([]), toList([text("OpenStack Swift")])),
+              div(toList([]), toList([text("Dulwich")])),
+              div(toList([]), toList([text("ButlerOS")]))
             ])
           )
         ])
       )
     ])
   );
+}
+function view_articles(_) {
+  return div(toList([]), toList([text("articles")]));
 }
 function view(model) {
   return div(
@@ -1108,13 +1257,19 @@ function view(model) {
             toList([
               nav(
                 toList([class$("flex gap-2")]),
-                toList([mk_link("/", "Home"), mk_link("/projects", "Projects")])
+                toList([
+                  mk_link("/", "Home"),
+                  mk_link("/projects", "Projects"),
+                  mk_link("/articles", "Articles")
+                ])
               ),
               (() => {
                 if (model instanceof Model && model.route instanceof Home) {
                   return view_home(model);
+                } else if (model instanceof Model && model.route instanceof Projects) {
+                  return view_projects(model);
                 } else {
-                  return view_project(model);
+                  return view_articles(model);
                 }
               })()
             ])
@@ -1131,7 +1286,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      25,
+      47,
       "main",
       "Assignment pattern did not match",
       { value: $ }
