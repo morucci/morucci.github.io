@@ -1,10 +1,10 @@
 import gleam/io
 import gleam/uri.{type Uri}
 import lustre
-import lustre/attribute.{class, href, target}
+import lustre/attribute.{class, href}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element, text}
-import lustre/element/html.{a, div, h1, nav, p}
+import lustre/element/html.{a, div, h1, h2, nav, p}
 import modem
 
 type Route {
@@ -26,20 +26,26 @@ pub fn main() {
   Nil
 }
 
-fn on_url_change(uri: Uri) -> Msg {
-  io.debug(uri)
+fn uri_to_route(uri: Uri) -> Route {
   case uri.path_segments(uri.path) {
-    ["projects"] -> OnRouteChange(Projects)
-    _ -> OnRouteChange(Home)
+    ["projects"] -> Projects
+    _ -> Home
   }
 }
 
+fn on_url_change(uri: Uri) -> Msg {
+  OnRouteChange(uri_to_route(uri))
+}
+
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(Model(Home), modem.init(on_url_change))
+  let route = case modem.initial_uri() {
+    Ok(uri) -> uri_to_route(uri)
+    Error(_) -> Home
+  }
+  #(Model(route), modem.init(on_url_change))
 }
 
 fn update(_model, msg) -> #(Model, Effect(Msg)) {
-  io.debug(msg)
   case msg {
     OnRouteChange(route) -> #(Model(route), effect.none())
   }
@@ -87,7 +93,21 @@ fn view_home(_model) {
 }
 
 fn view_project(_model) {
-  div([], [mk_page_title("Projects")])
+  div([], [
+    div([], [mk_page_title("Projects")]),
+    div([class("grid gap-2")], [
+      div([class("grid gap-1")], [
+        h2([class("text-1xl font-bold")], [
+          text("I am one of the main contributors on"),
+        ]),
+        div([], [text("Monocle")]),
+        div([], [text("Zuul")]),
+      ]),
+      div([class("grid gap-1")], [
+        h2([class("text-1xl font-bold")], [text("I did some contributions on")]),
+      ]),
+    ]),
+  ])
 }
 
 fn view(model) {
