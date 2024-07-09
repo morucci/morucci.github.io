@@ -1,6 +1,9 @@
 import gleam/dynamic
+import gleam/int
 import gleam/io
 import gleam/list
+import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 import gleam/uri.{type Uri}
 import lustre
@@ -17,35 +20,38 @@ type Route {
   Articles
 }
 
-type GitHubProject {
-  GitHubProject(name: String, stars: Int)
+type GitHubProjectRemoteInfo {
+  GitHubProjectRemoteInfo(
+    full_name: String,
+    stars: Int,
+    language: String,
+    description: String,
+  )
 }
 
 type Msg {
   OnRouteChange(Route)
-  OnGotGitHubProject(Result(GitHubProject, HttpError))
+  OnGotGitHubProject(Result(GitHubProjectRemoteInfo, HttpError))
 }
 
 type Model {
-  Model(route: Route, github_projects: List(GitHubProject))
-}
-
-type Ptype {
-  GitHub(org: String, name: String)
-  SF
-  Opendev
-  Pagure
+  Model(route: Route, projects: List(Project))
 }
 
 // TODO: Add start and end date
 type Project {
-  Project(
+  GenericProject(
     name: String,
-    ptype: Ptype,
     desc: String,
     repo_url: String,
     langs: List(String),
     contrib_desc: String,
+  )
+  GithubProject(
+    name: String,
+    org: String,
+    contrib_desc: String,
+    remote_info: Option(GitHubProjectRemoteInfo),
   )
 }
 
@@ -72,20 +78,47 @@ fn init(_flags) -> #(Model, Effect(Msg)) {
     Ok(uri) -> uri_to_route(uri)
     Error(_) -> Home
   }
-  #(Model(route, []), modem.init(on_url_change))
+  #(
+    Model(route, main_projects()),
+    main_projects()
+      |> list.map(get_project)
+      |> list.append([modem.init(on_url_change)])
+      |> effect.batch,
+  )
 }
 
 fn update(model: Model, msg) -> #(Model, Effect(Msg)) {
   case msg {
-    OnRouteChange(route) -> #(Model(route, model.github_projects), case route {
+    OnRouteChange(route) -> #(Model(..model, route: route), case route {
       Projects -> {
         main_projects() |> list.map(get_project) |> effect.batch
       }
       _ -> effect.none()
     })
-    OnGotGitHubProject(Ok(project)) -> {
-      io.debug(project)
-      #(model, effect.none())
+    OnGotGitHubProject(Ok(remote_project_info)) -> {
+      io.debug(remote_project_info)
+      let update_project = fn(project: Project) -> Project {
+        case project {
+          GithubProject(name, org, contrib_desc, _) -> {
+            case { org <> "/" <> name == remote_project_info.full_name } {
+              True -> {
+                GithubProject(
+                  name,
+                  org,
+                  contrib_desc,
+                  Some(remote_project_info),
+                )
+              }
+              False -> project
+            }
+          }
+          _ -> project
+        }
+      }
+      #(
+        Model(..model, projects: model.projects |> list.map(update_project)),
+        effect.none(),
+      )
     }
     OnGotGitHubProject(Error(err)) -> {
       io.debug(err)
@@ -96,28 +129,22 @@ fn update(model: Model, msg) -> #(Model, Effect(Msg)) {
 
 fn main_projects() -> List(Project) {
   [
-    Project(
-      "Monocle",
-      GitHub("change-metrics", "Monocle"),
-      "Monocle is capable of indexing Pull-Requests, Merge-Requests and "
-        <> "Gerrit reviews in order to provide development statistics and developer dashboards",
-      "https://github.com/change-metrics/monocle",
-      ["Haskell", "ReScript"],
+    GithubProject(
+      "monocle",
+      "change-metrics",
       "I started this project and I'm on of the main contributors of this project. "
         <> "The project has been initially started in Python, then for the fun and "
         <> "with the help of a colleague we migrated the code to Haskell.",
+      None,
     ),
-    Project(
-      "RepoXplorer",
-      GitHub("morucci", "repoxplorer"),
-      "Monocle provides statistics on Git repositories.",
-      "https://github.com/morucci/repoxplorer",
-      ["Python", "JavaScript"],
+    GithubProject(
+      "repoxplorer",
+      "morucci",
       "I started this project and was the main contribution on it",
+      None,
     ),
-    Project(
+    GenericProject(
       "Software Factory",
-      SF,
       " This project help us to maintain a development forge with Zuul as the main component for"
         <> " the CI/CD",
       "https://www.softwarefactory-project.io",
@@ -125,43 +152,33 @@ fn main_projects() -> List(Project) {
       "I'm working on this project with my co-workers. It is an infrastucture project and I used to"
         <> " provide improvements on the code base.",
     ),
-    Project(
-      "SF Operator",
-      GitHub("softwarefactory-project", "sf-operator"),
-      "This is an evolution of Software Factory made to be deployed"
-        <> " on OpenShift or Vanilla Kubernetes. This k8s operator manages a"
-        <> " Resource called Software Factory capable of deploying a CI/CD system based on Zuul",
-      "https://github.com/softwarefactory-project/sf-operator",
-      ["GO"],
+    GithubProject(
+      "sf-operator",
+      "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
+      None,
     ),
-    Project(
+    GenericProject(
       "Zuul CI",
-      Opendev,
       "This an Opendev's project initialy developed for the OpenStack project CI.",
       "https://opendev.org/zuul/zuul",
       ["Python", "TypeScript"],
       "I've contributed several improvment to Zuul, mainly the Git, Pagure, ElasticSearch and GitLab driver",
     ),
-    Project(
+    GithubProject(
       "HazardHunter",
-      GitHub("web-apps-lab", "HazardHunter"),
-      "This is a MineSweeper like game.",
-      "https://github.com/web-apps-lab/HazardHunter",
-      ["Haskell", "HTMX"],
+      "web-apps-lab",
       "I'm the main developer of it. Wanted to challenge myself to leverage HTMX via ButlerOS.",
+      None,
     ),
-    Project(
+    GithubProject(
       "MemoryMaster",
-      GitHub("web-apps-lab", "MemoryMaster"),
-      "Memory Master is a Concentration card game.",
-      "https://github.com/web-apps-lab/MemoryMaster",
-      ["Haskell", "HTMX"],
+      "web-apps-lab",
       "I'm the main developer of it. A second game after HazardHunter and because this is fun to code.",
+      None,
     ),
-    Project(
+    GenericProject(
       "FM gateway",
-      Pagure,
       "",
       "https://pagure.io/fm-gateway",
       ["Python"],
@@ -184,19 +201,24 @@ fn mk_page_title(title: String) -> Element(a) {
 }
 
 fn get_project(project: Project) -> Effect(Msg) {
-  let get_github_project = fn(org: String, name: String) {
-    let decoder =
-      dynamic.decode2(
-        GitHubProject,
-        dynamic.field("name", dynamic.string),
-        dynamic.field("stargazers_count", dynamic.int),
-      )
-    let url = "https://api.github.com/repos/" <> org <> "/" <> name
-    lustre_http.get(url, lustre_http.expect_json(decoder, OnGotGitHubProject))
-  }
-  case project.ptype {
-    GitHub(org, name) -> get_github_project(org, name)
-    _ -> effect.none()
+  case project {
+    GenericProject(_, _, _, _, _) -> effect.none()
+    GithubProject(_, _, _, Some(_)) -> {
+      io.debug("Already got")
+      effect.none()
+    }
+    GithubProject(name, org, _, None) -> {
+      let decoder =
+        dynamic.decode4(
+          GitHubProjectRemoteInfo,
+          dynamic.field("full_name", dynamic.string),
+          dynamic.field("stargazers_count", dynamic.int),
+          dynamic.field("language", dynamic.string),
+          dynamic.field("description", dynamic.string),
+        )
+      let url = "https://api.github.com/repos/" <> org <> "/" <> name
+      lustre_http.get(url, lustre_http.expect_json(decoder, OnGotGitHubProject))
+    }
   }
 }
 
@@ -229,19 +251,45 @@ fn view_home(_model) {
 }
 
 fn view_project(project: Project) {
-  div([], [
-    div([class("flex justify-between")], [
-      mk_link(project.repo_url, project.name),
-      div([], [project.langs |> string.join("/") |> text]),
-    ]),
-    div([class("grid gap-1")], [
-      div([], [text(project.desc)]),
-      div([], [text(project.contrib_desc)]),
-    ]),
-  ])
+  case project {
+    GenericProject(name, desc, repo_url, langs, contrib_desc) -> {
+      div([], [
+        div([class("flex justify-between")], [
+          mk_link(repo_url, name),
+          div([], [langs |> string.join("/") |> text]),
+        ]),
+        div([class("grid gap-1")], [
+          div([], [text(desc)]),
+          div([], [text(contrib_desc)]),
+        ]),
+      ])
+    }
+    GithubProject(name, org, contrib_desc, Some(ri)) -> {
+      div([], [
+        div([class("flex justify-between")], [
+          mk_link("https://github.com/" <> org <> "/" <> name, name),
+          div([], [ri.language |> text]),
+          div([], [ri.stars |> int.to_string |> text]),
+        ]),
+        div([class("grid gap-1")], [
+          div([], [text(ri.description)]),
+          div([], [text(contrib_desc)]),
+        ]),
+      ])
+    }
+    GithubProject(name, org, contrib_desc, None) -> {
+      div([], [
+        div([class("flex justify-between")], [
+          mk_link("https://github.com/" <> org <> "/" <> name, name),
+        ]),
+        div([class("grid gap-1")], [div([], [text(contrib_desc)])]),
+      ])
+    }
+  }
 }
 
-fn view_projects(_model) {
+fn view_projects(model: Model) {
+  io.debug(model.projects)
   div([], [
     div([], [mk_page_title("Projects")]),
     div([class("grid gap-2")], [
@@ -249,7 +297,7 @@ fn view_projects(_model) {
         h2([class("text-1xl font-bold")], [
           text("I have significant contributions to the following projects"),
         ]),
-        div([class("grid gap-2")], main_projects() |> list.map(view_project)),
+        div([class("grid gap-2")], model.projects |> list.map(view_project)),
       ]),
       div([class("grid gap-1")], [
         h2([class("text-1xl font-bold")], [

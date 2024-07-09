@@ -1546,18 +1546,28 @@ function field(name, inner_type) {
     );
   };
 }
-function decode2(constructor, t1, t2) {
-  return (value) => {
-    let $ = t1(value);
-    let $1 = t2(value);
-    if ($.isOk() && $1.isOk()) {
+function decode4(constructor, t1, t2, t3, t4) {
+  return (x) => {
+    let $ = t1(x);
+    let $1 = t2(x);
+    let $2 = t3(x);
+    let $3 = t4(x);
+    if ($.isOk() && $1.isOk() && $2.isOk() && $3.isOk()) {
       let a2 = $[0];
       let b = $1[0];
-      return new Ok(constructor(a2, b));
+      let c = $2[0];
+      let d = $3[0];
+      return new Ok(constructor(a2, b, c, d));
     } else {
       let a2 = $;
       let b = $1;
-      return new Error(concat2(toList([all_errors(a2), all_errors(b)])));
+      let c = $2;
+      let d = $3;
+      return new Error(
+        concat2(
+          toList([all_errors(a2), all_errors(b), all_errors(c), all_errors(d)])
+        )
+      );
     }
   };
 }
@@ -2004,7 +2014,7 @@ function do_decode(json, decoder) {
     }
   );
 }
-function decode3(json, decoder) {
+function decode2(json, decoder) {
   return do_decode(json, decoder);
 }
 
@@ -2943,7 +2953,7 @@ function expect_json(decoder, to_msg) {
       let _pipe$2 = then$(
         _pipe$1,
         (body) => {
-          let $ = decode3(body, decoder);
+          let $ = decode2(body, decoder);
           if ($.isOk()) {
             let json = $[0];
             return new Ok(json);
@@ -3072,11 +3082,13 @@ var Projects = class extends CustomType {
 };
 var Articles = class extends CustomType {
 };
-var GitHubProject = class extends CustomType {
-  constructor(name, stars) {
+var GitHubProjectRemoteInfo = class extends CustomType {
+  constructor(full_name, stars, language, description) {
     super();
-    this.name = name;
+    this.full_name = full_name;
     this.stars = stars;
+    this.language = language;
+    this.description = description;
   }
 };
 var OnRouteChange = class extends CustomType {
@@ -3092,34 +3104,29 @@ var OnGotGitHubProject = class extends CustomType {
   }
 };
 var Model = class extends CustomType {
-  constructor(route, github_projects) {
+  constructor(route, projects) {
     super();
     this.route = route;
-    this.github_projects = github_projects;
+    this.projects = projects;
   }
 };
-var GitHub = class extends CustomType {
-  constructor(org, name) {
-    super();
-    this.org = org;
-    this.name = name;
-  }
-};
-var SF = class extends CustomType {
-};
-var Opendev = class extends CustomType {
-};
-var Pagure = class extends CustomType {
-};
-var Project = class extends CustomType {
-  constructor(name, ptype, desc, repo_url, langs, contrib_desc) {
+var GenericProject = class extends CustomType {
+  constructor(name, desc, repo_url, langs, contrib_desc) {
     super();
     this.name = name;
-    this.ptype = ptype;
     this.desc = desc;
     this.repo_url = repo_url;
     this.langs = langs;
     this.contrib_desc = contrib_desc;
+  }
+};
+var GithubProject = class extends CustomType {
+  constructor(name, org, contrib_desc, remote_info) {
+    super();
+    this.name = name;
+    this.org = org;
+    this.contrib_desc = contrib_desc;
+    this.remote_info = remote_info;
   }
 };
 function uri_to_route(uri) {
@@ -3135,79 +3142,54 @@ function uri_to_route(uri) {
 function on_url_change(uri) {
   return new OnRouteChange(uri_to_route(uri));
 }
-function init3(_) {
-  let route = (() => {
-    let $ = do_initial_uri();
-    if ($.isOk()) {
-      let uri = $[0];
-      return uri_to_route(uri);
-    } else {
-      return new Home();
-    }
-  })();
-  return [new Model(route, toList([])), init2(on_url_change)];
-}
 function main_projects() {
   return toList([
-    new Project(
-      "Monocle",
-      new GitHub("change-metrics", "Monocle"),
-      "Monocle is capable of indexing Pull-Requests, Merge-Requests and Gerrit reviews in order to provide development statistics and developer dashboards",
-      "https://github.com/change-metrics/monocle",
-      toList(["Haskell", "ReScript"]),
-      "I started this project and I'm on of the main contributors of this project. The project has been initially started in Python, then for the fun and with the help of a colleague we migrated the code to Haskell."
+    new GithubProject(
+      "monocle",
+      "change-metrics",
+      "I started this project and I'm on of the main contributors of this project. The project has been initially started in Python, then for the fun and with the help of a colleague we migrated the code to Haskell.",
+      new None()
     ),
-    new Project(
-      "RepoXplorer",
-      new GitHub("morucci", "repoxplorer"),
-      "Monocle provides statistics on Git repositories.",
-      "https://github.com/morucci/repoxplorer",
-      toList(["Python", "JavaScript"]),
-      "I started this project and was the main contribution on it"
+    new GithubProject(
+      "repoxplorer",
+      "morucci",
+      "I started this project and was the main contribution on it",
+      new None()
     ),
-    new Project(
+    new GenericProject(
       "Software Factory",
-      new SF(),
       " This project help us to maintain a development forge with Zuul as the main component for the CI/CD",
       "https://www.softwarefactory-project.io",
       toList(["Ansible", "Python"]),
       "I'm working on this project with my co-workers. It is an infrastucture project and I used to provide improvements on the code base."
     ),
-    new Project(
-      "SF Operator",
-      new GitHub("softwarefactory-project", "sf-operator"),
-      "This is an evolution of Software Factory made to be deployed on OpenShift or Vanilla Kubernetes. This k8s operator manages a Resource called Software Factory capable of deploying a CI/CD system based on Zuul",
-      "https://github.com/softwarefactory-project/sf-operator",
-      toList(["GO"]),
-      "I'm currently actively working on that project with the help of my co-workers."
+    new GithubProject(
+      "sf-operator",
+      "softwarefactory-project",
+      "I'm currently actively working on that project with the help of my co-workers.",
+      new None()
     ),
-    new Project(
+    new GenericProject(
       "Zuul CI",
-      new Opendev(),
       "This an Opendev's project initialy developed for the OpenStack project CI.",
       "https://opendev.org/zuul/zuul",
       toList(["Python", "TypeScript"]),
       "I've contributed several improvment to Zuul, mainly the Git, Pagure, ElasticSearch and GitLab driver"
     ),
-    new Project(
+    new GithubProject(
       "HazardHunter",
-      new GitHub("web-apps-lab", "HazardHunter"),
-      "This is a MineSweeper like game.",
-      "https://github.com/web-apps-lab/HazardHunter",
-      toList(["Haskell", "HTMX"]),
-      "I'm the main developer of it. Wanted to challenge myself to leverage HTMX via ButlerOS."
+      "web-apps-lab",
+      "I'm the main developer of it. Wanted to challenge myself to leverage HTMX via ButlerOS.",
+      new None()
     ),
-    new Project(
+    new GithubProject(
       "MemoryMaster",
-      new GitHub("web-apps-lab", "MemoryMaster"),
-      "Memory Master is a Concentration card game.",
-      "https://github.com/web-apps-lab/MemoryMaster",
-      toList(["Haskell", "HTMX"]),
-      "I'm the main developer of it. A second game after HazardHunter and because this is fun to code."
+      "web-apps-lab",
+      "I'm the main developer of it. A second game after HazardHunter and because this is fun to code.",
+      new None()
     ),
-    new Project(
+    new GenericProject(
       "FM gateway",
-      new Pagure(),
       "",
       "https://pagure.io/fm-gateway",
       toList(["Python"]),
@@ -3228,13 +3210,22 @@ function mk_page_title(title) {
   );
 }
 function get_project(project) {
-  let get_github_project = (org, name) => {
-    let decoder = decode2(
-      (var0, var1) => {
-        return new GitHubProject(var0, var1);
+  if (project instanceof GenericProject) {
+    return none();
+  } else if (project instanceof GithubProject && project.remote_info instanceof Some) {
+    debug("Already got");
+    return none();
+  } else {
+    let name = project.name;
+    let org = project.org;
+    let decoder = decode4(
+      (var0, var1, var2, var3) => {
+        return new GitHubProjectRemoteInfo(var0, var1, var2, var3);
       },
-      field("name", string),
-      field("stargazers_count", int)
+      field("full_name", string),
+      field("stargazers_count", int),
+      field("language", string),
+      field("description", string)
     );
     let url = "https://api.github.com/repos/" + org + "/" + name;
     return get2(
@@ -3246,21 +3237,33 @@ function get_project(project) {
         }
       )
     );
-  };
-  let $ = project.ptype;
-  if ($ instanceof GitHub) {
-    let org = $.org;
-    let name = $.name;
-    return get_github_project(org, name);
-  } else {
-    return none();
   }
+}
+function init3(_) {
+  let route = (() => {
+    let $ = do_initial_uri();
+    if ($.isOk()) {
+      let uri = $[0];
+      return uri_to_route(uri);
+    } else {
+      return new Home();
+    }
+  })();
+  return [
+    new Model(route, main_projects()),
+    (() => {
+      let _pipe = main_projects();
+      let _pipe$1 = map2(_pipe, get_project);
+      let _pipe$2 = append(_pipe$1, toList([init2(on_url_change)]));
+      return batch(_pipe$2);
+    })()
+  ];
 }
 function update2(model, msg) {
   if (msg instanceof OnRouteChange) {
     let route = msg[0];
     return [
-      new Model(route, model.github_projects),
+      model.withFields({ route }),
       (() => {
         if (route instanceof Projects) {
           let _pipe = main_projects();
@@ -3272,9 +3275,37 @@ function update2(model, msg) {
       })()
     ];
   } else if (msg instanceof OnGotGitHubProject && msg[0].isOk()) {
-    let project = msg[0][0];
-    debug(project);
-    return [model, none()];
+    let remote_project_info = msg[0][0];
+    debug(remote_project_info);
+    let update_project = (project) => {
+      if (project instanceof GithubProject) {
+        let name = project.name;
+        let org = project.org;
+        let contrib_desc = project.contrib_desc;
+        let $ = org + "/" + name === remote_project_info.full_name;
+        if ($) {
+          return new GithubProject(
+            name,
+            org,
+            contrib_desc,
+            new Some(remote_project_info)
+          );
+        } else {
+          return project;
+        }
+      } else {
+        return project;
+      }
+    };
+    return [
+      model.withFields({
+        projects: (() => {
+          let _pipe = model.projects;
+          return map2(_pipe, update_project);
+        })()
+      }),
+      none()
+    ];
   } else {
     let err = msg[0][0];
     debug(err);
@@ -3324,36 +3355,103 @@ function view_home(_) {
   );
 }
 function view_project(project) {
-  return div(
-    toList([]),
-    toList([
-      div(
-        toList([class$("flex justify-between")]),
-        toList([
-          mk_link(project.repo_url, project.name),
-          div(
-            toList([]),
-            toList([
-              (() => {
-                let _pipe = project.langs;
-                let _pipe$1 = join2(_pipe, "/");
-                return text(_pipe$1);
-              })()
-            ])
-          )
-        ])
-      ),
-      div(
-        toList([class$("grid gap-1")]),
-        toList([
-          div(toList([]), toList([text(project.desc)])),
-          div(toList([]), toList([text(project.contrib_desc)]))
-        ])
-      )
-    ])
-  );
+  if (project instanceof GenericProject) {
+    let name = project.name;
+    let desc = project.desc;
+    let repo_url = project.repo_url;
+    let langs = project.langs;
+    let contrib_desc = project.contrib_desc;
+    return div(
+      toList([]),
+      toList([
+        div(
+          toList([class$("flex justify-between")]),
+          toList([
+            mk_link(repo_url, name),
+            div(
+              toList([]),
+              toList([
+                (() => {
+                  let _pipe = langs;
+                  let _pipe$1 = join2(_pipe, "/");
+                  return text(_pipe$1);
+                })()
+              ])
+            )
+          ])
+        ),
+        div(
+          toList([class$("grid gap-1")]),
+          toList([
+            div(toList([]), toList([text(desc)])),
+            div(toList([]), toList([text(contrib_desc)]))
+          ])
+        )
+      ])
+    );
+  } else if (project instanceof GithubProject && project.remote_info instanceof Some) {
+    let name = project.name;
+    let org = project.org;
+    let contrib_desc = project.contrib_desc;
+    let ri = project.remote_info[0];
+    return div(
+      toList([]),
+      toList([
+        div(
+          toList([class$("flex justify-between")]),
+          toList([
+            mk_link("https://github.com/" + org + "/" + name, name),
+            div(
+              toList([]),
+              toList([
+                (() => {
+                  let _pipe = ri.language;
+                  return text(_pipe);
+                })()
+              ])
+            ),
+            div(
+              toList([]),
+              toList([
+                (() => {
+                  let _pipe = ri.stars;
+                  let _pipe$1 = to_string2(_pipe);
+                  return text(_pipe$1);
+                })()
+              ])
+            )
+          ])
+        ),
+        div(
+          toList([class$("grid gap-1")]),
+          toList([
+            div(toList([]), toList([text(ri.description)])),
+            div(toList([]), toList([text(contrib_desc)]))
+          ])
+        )
+      ])
+    );
+  } else {
+    let name = project.name;
+    let org = project.org;
+    let contrib_desc = project.contrib_desc;
+    return div(
+      toList([]),
+      toList([
+        div(
+          toList([class$("flex justify-between")]),
+          toList([mk_link("https://github.com/" + org + "/" + name, name)])
+        ),
+        div(
+          toList([class$("grid gap-1")]),
+          toList([div(toList([]), toList([text(contrib_desc)]))])
+        )
+      ])
+    );
+  }
 }
-function view_projects(_) {
+function view_projects(model) {
+  debug(model.projects);
   return div(
     toList([]),
     toList([
@@ -3375,7 +3473,7 @@ function view_projects(_) {
               div(
                 toList([class$("grid gap-2")]),
                 (() => {
-                  let _pipe = main_projects();
+                  let _pipe = model.projects;
                   return map2(_pipe, view_project);
                 })()
               )
@@ -3445,7 +3543,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      54,
+      60,
       "main",
       "Assignment pattern did not match",
       { value: $ }
