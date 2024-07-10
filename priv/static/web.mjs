@@ -3273,12 +3273,26 @@ function main_projects() {
       true,
       new None()
     ),
+    new GithubProject(
+      "bbot",
+      "morucci",
+      "A little project I've wrote mainly to learn about OCaml.",
+      true,
+      new None()
+    ),
     new GenericProject(
       "FM gateway",
-      "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service. The Gateway only acts on specific to(owner)",
+      "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service.",
       "https://pagure.io/fm-gateway",
       toList(["Python"]),
       "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge"
+    ),
+    new GithubProject(
+      "pidstat-grapher",
+      "morucci",
+      "Project I wrote due to a need to plot system processes resources consumption",
+      true,
+      new None()
     )
   ]);
 }
@@ -3611,7 +3625,9 @@ function view_articles(_) {
 function view(model) {
   return div(
     toList([
-      class$("flex flex-row justify-center h-screen bg-zinc-800 text-teal-200")
+      class$(
+        "flex flex-row justify-center min-h-screen bg-zinc-800 text-teal-200"
+      )
     ]),
     toList([
       div(

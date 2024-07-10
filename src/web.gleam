@@ -197,12 +197,26 @@ fn main_projects() -> List(Project) {
       True,
       None,
     ),
+    GithubProject(
+      "bbot",
+      "morucci",
+      "A little project I've wrote mainly to learn about OCaml.",
+      True,
+      None,
+    ),
     GenericProject(
       "FM gateway",
-      "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service. The Gateway only acts on specific to(owner)",
+      "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service.",
       "https://pagure.io/fm-gateway",
       ["Python"],
       "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge",
+    ),
+    GithubProject(
+      "pidstat-grapher",
+      "morucci",
+      "Project I wrote due to a need to plot system processes resources consumption",
+      True,
+      None,
     ),
   ]
 }
@@ -352,7 +366,11 @@ fn view_articles(_model) {
 fn view(model: Model) {
   // Set flex and ensure the container is centered
   div(
-    [class("flex flex-row justify-center h-screen bg-zinc-800 text-teal-200")],
+    [
+      class(
+        "flex flex-row justify-center min-h-screen bg-zinc-800 text-teal-200",
+      ),
+    ],
     [
       // Ensure we are not using to full wide size
       div([class("basis-10/12")], [
