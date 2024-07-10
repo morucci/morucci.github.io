@@ -1064,6 +1064,28 @@ function concat(xs) {
 function starts_with(haystack, needle) {
   return haystack.startsWith(needle);
 }
+var unicode_whitespaces = [
+  " ",
+  // Space
+  "	",
+  // Horizontal tab
+  "\n",
+  // Line feed
+  "\v",
+  // Vertical tab
+  "\f",
+  // Form feed
+  "\r",
+  // Carriage return
+  "\x85",
+  // Next line
+  "\u2028",
+  // Line separator
+  "\u2029"
+  // Paragraph separator
+].join();
+var left_trim_regex = new RegExp(`^([${unicode_whitespaces}]*)`, "g");
+var right_trim_regex = new RegExp(`([${unicode_whitespaces}]*)$`, "g");
 function print_debug(string3) {
   if (typeof process === "object" && process.stderr?.write) {
     process.stderr.write(string3 + "\n");
@@ -1183,7 +1205,7 @@ function inspect(v) {
   if (v === void 0)
     return "Nil";
   if (t === "string")
-    return JSON.stringify(v);
+    return inspectString(v);
   if (t === "bigint" || t === "number")
     return v.toString();
   if (Array.isArray(v))
@@ -1211,6 +1233,40 @@ function inspect(v) {
     return `//fn(${args.join(", ")}) { ... }`;
   }
   return inspectObject(v);
+}
+function inspectString(str) {
+  let new_str = '"';
+  for (let i = 0; i < str.length; i++) {
+    let char = str[i];
+    switch (char) {
+      case "\n":
+        new_str += "\\n";
+        break;
+      case "\r":
+        new_str += "\\r";
+        break;
+      case "	":
+        new_str += "\\t";
+        break;
+      case "\f":
+        new_str += "\\f";
+        break;
+      case "\\":
+        new_str += "\\\\";
+        break;
+      case '"':
+        new_str += '\\"';
+        break;
+      default:
+        if (char < " " || char > "~" && char < "\xA0") {
+          new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+        } else {
+          new_str += char;
+        }
+    }
+  }
+  new_str += '"';
+  return new_str;
 }
 function inspectDict(map6) {
   let body = "dict.from_list([";
@@ -1451,6 +1507,39 @@ function split2(iodata, pattern) {
   return split(iodata, pattern);
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/string.mjs
+function lowercase2(string3) {
+  return lowercase(string3);
+}
+function starts_with2(string3, prefix) {
+  return starts_with(string3, prefix);
+}
+function concat3(strings) {
+  let _pipe = strings;
+  let _pipe$1 = from_strings(_pipe);
+  return to_string3(_pipe$1);
+}
+function join2(strings, separator) {
+  return join(strings, separator);
+}
+function pop_grapheme2(string3) {
+  return pop_grapheme(string3);
+}
+function split3(x, substring) {
+  if (substring === "") {
+    return graphemes(x);
+  } else {
+    let _pipe = x;
+    let _pipe$1 = from_string(_pipe);
+    let _pipe$2 = split2(_pipe$1, substring);
+    return map2(_pipe$2, to_string3);
+  }
+}
+function inspect2(term) {
+  let _pipe = inspect(term);
+  return to_string3(_pipe);
+}
+
 // build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
 var DecodeError = class extends CustomType {
   constructor(expected, found, path) {
@@ -1462,9 +1551,6 @@ var DecodeError = class extends CustomType {
 };
 function from(a2) {
   return identity(a2);
-}
-function string(data) {
-  return decode_string(data);
 }
 function classify(data) {
   return classify_dynamic(data);
@@ -1527,6 +1613,9 @@ function map_errors(result, f) {
     }
   );
 }
+function string(data) {
+  return decode_string(data);
+}
 function field(name, inner_type) {
   return (value) => {
     let missing_field_error = new DecodeError("field", "nothing", toList([]));
@@ -1570,39 +1659,6 @@ function decode4(constructor, t1, t2, t3, t4) {
       );
     }
   };
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/string.mjs
-function lowercase2(string3) {
-  return lowercase(string3);
-}
-function starts_with2(string3, prefix) {
-  return starts_with(string3, prefix);
-}
-function concat3(strings) {
-  let _pipe = strings;
-  let _pipe$1 = from_strings(_pipe);
-  return to_string3(_pipe$1);
-}
-function join2(strings, separator) {
-  return join(strings, separator);
-}
-function pop_grapheme2(string3) {
-  return pop_grapheme(string3);
-}
-function split3(x, substring) {
-  if (substring === "") {
-    return graphemes(x);
-  } else {
-    let _pipe = x;
-    let _pipe$1 = from_string(_pipe);
-    let _pipe$2 = split2(_pipe$1, substring);
-    return map2(_pipe$2, to_string3);
-  }
-}
-function inspect2(term) {
-  let _pipe = inspect(term);
-  return to_string3(_pipe);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/io.mjs
@@ -2434,18 +2490,18 @@ var LustreClientApplication2 = class _LustreClientApplication {
   #model = null;
   #update = null;
   #view = null;
-  static start(flags, selector, init4, update3, view2) {
+  static start(flags, selector, init4, update2, view2) {
     if (!is_browser())
       return new Error(new NotABrowser());
     const root2 = selector instanceof HTMLElement ? selector : document.querySelector(selector);
     if (!root2)
       return new Error(new ElementNotFound(selector));
-    const app = new _LustreClientApplication(init4(flags), update3, view2, root2);
+    const app = new _LustreClientApplication(init4(flags), update2, view2, root2);
     return new Ok((msg) => app.send(msg));
   }
-  constructor([model, effects], update3, view2, root2 = document.body, isComponent = false) {
+  constructor([model, effects], update2, view2, root2 = document.body, isComponent = false) {
     this.#model = model;
-    this.#update = update3;
+    this.#update = update2;
     this.#view = view2;
     this.#root = root2;
     this.#effects = effects.all.toArray();
@@ -2557,10 +2613,10 @@ var is_browser = () => globalThis.window && window.document;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init4, update3, view2, on_attribute_change) {
+  constructor(init4, update2, view2, on_attribute_change) {
     super();
     this.init = init4;
-    this.update = update3;
+    this.update = update2;
     this.view = view2;
     this.on_attribute_change = on_attribute_change;
   }
@@ -2573,8 +2629,8 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init4, update3, view2) {
-  return new App(init4, update3, view2, new None());
+function application(init4, update2, view2) {
+  return new App(init4, update2, view2, new None());
 }
 function start3(app, selector, flags) {
   return guard(
@@ -3296,7 +3352,7 @@ function init3(_) {
     })()
   ];
 }
-function update2(model, msg) {
+function update(model, msg) {
   if (msg instanceof OnRouteChange) {
     let route = msg[0];
     return [
@@ -3595,7 +3651,7 @@ function view(model) {
   );
 }
 function main() {
-  let app = application(init3, update2, view);
+  let app = application(init3, update, view);
   let $ = start3(app, "#app", void 0);
   if (!$.isOk()) {
     throw makeError(
