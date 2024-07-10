@@ -3,7 +3,6 @@ import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/result
 import gleam/string
 import gleam/uri.{type Uri}
 import lustre
@@ -91,7 +90,7 @@ fn update(model: Model, msg) -> #(Model, Effect(Msg)) {
   case msg {
     OnRouteChange(route) -> #(Model(..model, route: route), case route {
       Projects -> {
-        main_projects() |> list.map(get_project) |> effect.batch
+        model.projects |> list.map(get_project) |> effect.batch
       }
       _ -> effect.none()
     })
@@ -200,14 +199,23 @@ fn mk_page_title(title: String) -> Element(a) {
   ])
 }
 
+fn build_full_name(org: String, name: String) -> String {
+  org <> "/" <> name
+}
+
 fn get_project(project: Project) -> Effect(Msg) {
   case project {
     GenericProject(_, _, _, _, _) -> effect.none()
-    GithubProject(_, _, _, Some(_)) -> {
-      io.debug("Already got")
+    GithubProject(name, org, _, Some(_)) -> {
+      io.debug(
+        "remote infos for alreay for "
+        <> build_full_name(org, name)
+        <> " already in app state",
+      )
       effect.none()
     }
     GithubProject(name, org, _, None) -> {
+      io.debug("fetching remote infos for " <> build_full_name(org, name))
       let decoder =
         dynamic.decode4(
           GitHubProjectRemoteInfo,
@@ -268,8 +276,10 @@ fn view_project(project: Project) {
       div([], [
         div([class("flex justify-between")], [
           mk_link("https://github.com/" <> org <> "/" <> name, name),
-          div([], [ri.language |> text]),
-          div([], [ri.stars |> int.to_string |> text]),
+          div([class("flex flex-row gap-2")], [
+            div([], [text("stars: " <> ri.stars |> int.to_string)]),
+            div([], [text("language: " <> ri.language)]),
+          ]),
         ]),
         div([class("grid gap-1")], [
           div([], [text(ri.description)]),
@@ -289,7 +299,6 @@ fn view_project(project: Project) {
 }
 
 fn view_projects(model: Model) {
-  io.debug(model.projects)
   div([], [
     div([], [mk_page_title("Projects")]),
     div([class("grid gap-2")], [
@@ -317,14 +326,16 @@ fn view_articles(_model) {
 
 fn view(model: Model) {
   // Set flex and ensure the container is centered
-  div([class("flex flex-row justify-center")], [
+  div([class("flex flex-row justify-center h-screen bg-blue-100")], [
     // Ensure we are not using to full wide size
     div([class("basis-10/12")], [
-      div([class("w-full max-w-5xl mx-auto")], [
-        nav([class("flex gap-2")], [
-          mk_link("/", "Home"),
-          mk_link("/projects", "Projects"),
-          mk_link("/articles", "Articles"),
+      div([class("pt-1 w-full max-w-5xl mx-auto")], [
+        div([class("p-1 border-2 border-blue-200")], [
+          nav([class("flex gap-2")], [
+            mk_link("/", "Home"),
+            mk_link("/projects", "Projects"),
+            mk_link("/articles", "Articles"),
+          ]),
         ]),
         case model.route {
           Home -> view_home(model)

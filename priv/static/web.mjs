@@ -3209,15 +3209,23 @@ function mk_page_title(title) {
     toList([h1(toList([class$("text-2xl font-bold")]), toList([text(title)]))])
   );
 }
+function build_full_name(org, name) {
+  return org + "/" + name;
+}
 function get_project(project) {
   if (project instanceof GenericProject) {
     return none();
   } else if (project instanceof GithubProject && project.remote_info instanceof Some) {
-    debug("Already got");
+    let name = project.name;
+    let org = project.org;
+    debug(
+      "remote infos for alreay for " + build_full_name(org, name) + " already in app state"
+    );
     return none();
   } else {
     let name = project.name;
     let org = project.org;
+    debug("fetching remote infos for " + build_full_name(org, name));
     let decoder = decode4(
       (var0, var1, var2, var3) => {
         return new GitHubProjectRemoteInfo(var0, var1, var2, var3);
@@ -3266,7 +3274,7 @@ function update2(model, msg) {
       model.withFields({ route }),
       (() => {
         if (route instanceof Projects) {
-          let _pipe = main_projects();
+          let _pipe = model.projects;
           let _pipe$1 = map2(_pipe, get_project);
           return batch(_pipe$1);
         } else {
@@ -3402,22 +3410,20 @@ function view_project(project) {
           toList([
             mk_link("https://github.com/" + org + "/" + name, name),
             div(
-              toList([]),
+              toList([class$("flex flex-row gap-2")]),
               toList([
-                (() => {
-                  let _pipe = ri.language;
-                  return text(_pipe);
-                })()
-              ])
-            ),
-            div(
-              toList([]),
-              toList([
-                (() => {
-                  let _pipe = ri.stars;
-                  let _pipe$1 = to_string2(_pipe);
-                  return text(_pipe$1);
-                })()
+                div(
+                  toList([]),
+                  toList([
+                    text(
+                      "stars: " + (() => {
+                        let _pipe = ri.stars;
+                        return to_string2(_pipe);
+                      })()
+                    )
+                  ])
+                ),
+                div(toList([]), toList([text("language: " + ri.language)]))
               ])
             )
           ])
@@ -3451,7 +3457,6 @@ function view_project(project) {
   }
 }
 function view_projects(model) {
-  debug(model.projects);
   return div(
     toList([]),
     toList([
@@ -3503,20 +3508,25 @@ function view_articles(_) {
 }
 function view(model) {
   return div(
-    toList([class$("flex flex-row justify-center")]),
+    toList([class$("flex flex-row justify-center h-screen bg-blue-100")]),
     toList([
       div(
         toList([class$("basis-10/12")]),
         toList([
           div(
-            toList([class$("w-full max-w-5xl mx-auto")]),
+            toList([class$("pt-1 w-full max-w-5xl mx-auto")]),
             toList([
-              nav(
-                toList([class$("flex gap-2")]),
+              div(
+                toList([class$("p-1 border-2 border-blue-200")]),
                 toList([
-                  mk_link("/", "Home"),
-                  mk_link("/projects", "Projects"),
-                  mk_link("/articles", "Articles")
+                  nav(
+                    toList([class$("flex gap-2")]),
+                    toList([
+                      mk_link("/", "Home"),
+                      mk_link("/projects", "Projects"),
+                      mk_link("/articles", "Articles")
+                    ])
+                  )
                 ])
               ),
               (() => {
@@ -3543,7 +3553,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      60,
+      59,
       "main",
       "Assignment pattern did not match",
       { value: $ }
