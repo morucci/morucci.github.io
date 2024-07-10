@@ -2084,6 +2084,9 @@ function class$(name) {
 function href(uri) {
   return attribute("href", uri);
 }
+function src(uri) {
+  return attribute("src", uri);
+}
 
 // build/dev/javascript/lustre/lustre/element.mjs
 function element(tag, attrs, children) {
@@ -2121,6 +2124,9 @@ function element(tag, attrs, children) {
 }
 function text(content) {
   return new Text(content);
+}
+function none2() {
+  return new Text("");
 }
 
 // build/dev/javascript/lustre/lustre/internals/runtime.mjs
@@ -2598,6 +2604,9 @@ function p(attrs, children) {
 }
 function a(attrs, children) {
   return element("a", attrs, children);
+}
+function img(attrs) {
+  return element("img", attrs, toList([]));
 }
 
 // build/dev/javascript/gleam_http/gleam/http.mjs
@@ -3121,11 +3130,12 @@ var GenericProject = class extends CustomType {
   }
 };
 var GithubProject = class extends CustomType {
-  constructor(name, org, contrib_desc, remote_info) {
+  constructor(name, org, contrib_desc, owner, remote_info) {
     super();
     this.name = name;
     this.org = org;
     this.contrib_desc = contrib_desc;
+    this.owner = owner;
     this.remote_info = remote_info;
   }
 };
@@ -3148,12 +3158,14 @@ function main_projects() {
       "monocle",
       "change-metrics",
       "I started this project and I'm on of the main contributors of this project. The project has been initially started in Python, then for the fun and with the help of a colleague we migrated the code to Haskell.",
+      true,
       new None()
     ),
     new GithubProject(
       "repoxplorer",
       "morucci",
       "I started this project and was the main contribution on it",
+      true,
       new None()
     ),
     new GenericProject(
@@ -3167,6 +3179,7 @@ function main_projects() {
       "sf-operator",
       "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
+      false,
       new None()
     ),
     new GenericProject(
@@ -3179,27 +3192,43 @@ function main_projects() {
     new GithubProject(
       "HazardHunter",
       "web-apps-lab",
-      "I'm the main developer of it. Wanted to challenge myself to leverage HTMX via ButlerOS.",
+      "Wanted to challenge myself to leverage HTMX via ButlerOS.",
+      true,
       new None()
     ),
     new GithubProject(
       "MemoryMaster",
       "web-apps-lab",
-      "I'm the main developer of it. A second game after HazardHunter and because this is fun to code.",
+      "A second game after HazardHunter and because it was fun to build.",
+      true,
+      new None()
+    ),
+    new GithubProject(
+      "FreeSnaky",
+      "morucci",
+      "A challenge to learn more about Haskell, the Brick engine and capability to have the whole game logic handled server side and the terminal UI to be just a dumb display.",
+      true,
+      new None()
+    ),
+    new GithubProject(
+      "schat",
+      "morucci",
+      "This is a learning project around Haskell and HTMX.",
+      true,
       new None()
     ),
     new GenericProject(
       "FM gateway",
-      "",
+      "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service. The Gateway only acts on specific to(owner)",
       "https://pagure.io/fm-gateway",
       toList(["Python"]),
-      ""
+      "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge"
     )
   ]);
 }
 function mk_link(link, link_text) {
   return a(
-    toList([class$("text-blue-600 visited:text-purple-600"), href(link)]),
+    toList([class$("text-indigo-500"), href(link)]),
     toList([text(link_text)])
   );
 }
@@ -3290,12 +3319,14 @@ function update2(model, msg) {
         let name = project.name;
         let org = project.org;
         let contrib_desc = project.contrib_desc;
+        let owner = project.owner;
         let $ = org + "/" + name === remote_project_info.full_name;
         if ($) {
           return new GithubProject(
             name,
             org,
             contrib_desc,
+            owner,
             new Some(remote_project_info)
           );
         } else {
@@ -3326,35 +3357,37 @@ function view_home(_) {
     toList([
       mk_page_title("Welcome on my web page"),
       div(
-        toList([class$("grid gap-2")]),
+        toList([class$("flex flex-col gap-2")]),
         toList([
-          p(
-            toList([]),
+          div(
+            toList([class$("self-center")]),
             toList([
-              text(
-                "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer."
+              img(
+                toList([
+                  class$("rounded-full w-32 h-32"),
+                  src("https://avatars.githubusercontent.com/u/84583")
+                ])
               )
             ])
           ),
-          p(
-            toList([]),
+          div(
+            toList([class$("flex flex-col gap-2")]),
             toList([
-              text(
-                "At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and"
-              ),
-              mk_link("https://www.rdoproject.org", " RDO"),
-              text(". "),
-              text("My daily duty is maintaining the CI infrastucture based on"),
-              mk_link("https://zuul-ci.org/", " Zuul"),
-              text(". ")
-            ])
-          ),
-          p(
-            toList([]),
-            toList([
-              text("I contribute to"),
-              mk_link("/projects", " various Open Source projects "),
-              text("for work and during my free time.")
+              p(
+                toList([]),
+                toList([
+                  text(
+                    "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer."
+                  ),
+                  text(
+                    " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and"
+                  ),
+                  mk_link("https://www.rdoproject.org", " RDO"),
+                  text(". I contribute to"),
+                  mk_link("/projects", " various Open Source projects "),
+                  text("for work and during my free time.")
+                ])
+              )
             ])
           )
         ])
@@ -3401,6 +3434,7 @@ function view_project(project) {
     let name = project.name;
     let org = project.org;
     let contrib_desc = project.contrib_desc;
+    let owner = project.owner;
     let ri = project.remote_info[0];
     return div(
       toList([]),
@@ -3408,7 +3442,19 @@ function view_project(project) {
         div(
           toList([class$("flex justify-between")]),
           toList([
-            mk_link("https://github.com/" + org + "/" + name, name),
+            div(
+              toList([class$("flex gap-1")]),
+              toList([
+                mk_link("https://github.com/" + org + "/" + name, name),
+                (() => {
+                  if (owner) {
+                    return text("(owner)");
+                  } else {
+                    return none2();
+                  }
+                })()
+              ])
+            ),
             div(
               toList([class$("flex flex-row gap-2")]),
               toList([
@@ -3416,14 +3462,14 @@ function view_project(project) {
                   toList([]),
                   toList([
                     text(
-                      "stars: " + (() => {
+                      (() => {
                         let _pipe = ri.stars;
                         return to_string2(_pipe);
-                      })()
+                      })() + "\u2B50"
                     )
                   ])
                 ),
-                div(toList([]), toList([text("language: " + ri.language)]))
+                div(toList([]), toList([text(ri.language)]))
               ])
             )
           ])
@@ -3508,7 +3554,9 @@ function view_articles(_) {
 }
 function view(model) {
   return div(
-    toList([class$("flex flex-row justify-center h-screen bg-blue-100")]),
+    toList([
+      class$("flex flex-row justify-center h-screen bg-zinc-800 text-teal-200")
+    ]),
     toList([
       div(
         toList([class$("basis-10/12")]),
@@ -3517,7 +3565,7 @@ function view(model) {
             toList([class$("pt-1 w-full max-w-5xl mx-auto")]),
             toList([
               div(
-                toList([class$("p-1 border-2 border-blue-200")]),
+                toList([class$("p-1 border-2 border-indigo-500 bg-zinc-900")]),
                 toList([
                   nav(
                     toList([class$("flex gap-2")]),
@@ -3553,7 +3601,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      59,
+      60,
       "main",
       "Assignment pattern did not match",
       { value: $ }

@@ -6,10 +6,10 @@ import gleam/option.{type Option, None, Some}
 import gleam/string
 import gleam/uri.{type Uri}
 import lustre
-import lustre/attribute.{class, href}
+import lustre/attribute.{class, href, src}
 import lustre/effect.{type Effect}
-import lustre/element.{type Element, text}
-import lustre/element/html.{a, div, h1, h2, nav, p}
+import lustre/element.{type Element, none, text}
+import lustre/element/html.{a, div, h1, h2, img, nav, p, span}
 import lustre_http.{type HttpError}
 import modem
 
@@ -50,6 +50,7 @@ type Project {
     name: String,
     org: String,
     contrib_desc: String,
+    owner: Bool,
     remote_info: Option(GitHubProjectRemoteInfo),
   )
 }
@@ -98,13 +99,14 @@ fn update(model: Model, msg) -> #(Model, Effect(Msg)) {
       io.debug(remote_project_info)
       let update_project = fn(project: Project) -> Project {
         case project {
-          GithubProject(name, org, contrib_desc, _) -> {
+          GithubProject(name, org, contrib_desc, owner, _) -> {
             case { org <> "/" <> name == remote_project_info.full_name } {
               True -> {
                 GithubProject(
                   name,
                   org,
                   contrib_desc,
+                  owner,
                   Some(remote_project_info),
                 )
               }
@@ -134,12 +136,14 @@ fn main_projects() -> List(Project) {
       "I started this project and I'm on of the main contributors of this project. "
         <> "The project has been initially started in Python, then for the fun and "
         <> "with the help of a colleague we migrated the code to Haskell.",
+      True,
       None,
     ),
     GithubProject(
       "repoxplorer",
       "morucci",
       "I started this project and was the main contribution on it",
+      True,
       None,
     ),
     GenericProject(
@@ -155,6 +159,7 @@ fn main_projects() -> List(Project) {
       "sf-operator",
       "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
+      False,
       None,
     ),
     GenericProject(
@@ -167,29 +172,43 @@ fn main_projects() -> List(Project) {
     GithubProject(
       "HazardHunter",
       "web-apps-lab",
-      "I'm the main developer of it. Wanted to challenge myself to leverage HTMX via ButlerOS.",
+      "Wanted to challenge myself to leverage HTMX via ButlerOS.",
+      True,
       None,
     ),
     GithubProject(
       "MemoryMaster",
       "web-apps-lab",
-      "I'm the main developer of it. A second game after HazardHunter and because this is fun to code.",
+      "A second game after HazardHunter and because it was fun to build.",
+      True,
+      None,
+    ),
+    GithubProject(
+      "FreeSnaky",
+      "morucci",
+      "A challenge to learn more about Haskell, the Brick engine and capability to have the whole game logic handled server side and the terminal UI to be just a dumb display.",
+      True,
+      None,
+    ),
+    GithubProject(
+      "schat",
+      "morucci",
+      "This is a learning project around Haskell and HTMX.",
+      True,
       None,
     ),
     GenericProject(
       "FM gateway",
-      "",
+      "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service. The Gateway only acts on specific to(owner)",
       "https://pagure.io/fm-gateway",
       ["Python"],
-      "",
+      "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge",
     ),
   ]
 }
 
 fn mk_link(link: String, link_text: String) -> Element(a) {
-  a([class("text-blue-600 visited:text-purple-600"), href(link)], [
-    text(link_text),
-  ])
+  a([class("text-indigo-500"), href(link)], [text(link_text)])
 }
 
 fn mk_page_title(title: String) -> Element(a) {
@@ -206,7 +225,7 @@ fn build_full_name(org: String, name: String) -> String {
 fn get_project(project: Project) -> Effect(Msg) {
   case project {
     GenericProject(_, _, _, _, _) -> effect.none()
-    GithubProject(name, org, _, Some(_)) -> {
+    GithubProject(name, org, _, _, Some(_)) -> {
       io.debug(
         "remote infos for alreay for "
         <> build_full_name(org, name)
@@ -214,7 +233,7 @@ fn get_project(project: Project) -> Effect(Msg) {
       )
       effect.none()
     }
-    GithubProject(name, org, _, None) -> {
+    GithubProject(name, org, _, _, None) -> {
       io.debug("fetching remote infos for " <> build_full_name(org, name))
       let decoder =
         dynamic.decode4(
@@ -233,26 +252,26 @@ fn get_project(project: Project) -> Effect(Msg) {
 fn view_home(_model) {
   div([], [
     mk_page_title("Welcome on my web page"),
-    div([class("grid gap-2")], [
-      p([], [
-        text(
-          "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer.",
-        ),
+    div([class("flex flex-col gap-2")], [
+      div([class("self-center")], [
+        img([
+          class("rounded-full w-32 h-32"),
+          src("https://avatars.githubusercontent.com/u/84583"),
+        ]),
       ]),
-      p([], [
-        text(
-          "At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and",
-        ),
-        mk_link("https://www.rdoproject.org", " RDO"),
-        text(". "),
-        text("My daily duty is maintaining the CI infrastucture based on"),
-        mk_link("https://zuul-ci.org/", " Zuul"),
-        text(". "),
-      ]),
-      p([], [
-        text("I contribute to"),
-        mk_link("/projects", " various Open Source projects "),
-        text("for work and during my free time."),
+      div([class("flex flex-col gap-2")], [
+        p([], [
+          text(
+            "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer.",
+          ),
+          text(
+            " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and",
+          ),
+          mk_link("https://www.rdoproject.org", " RDO"),
+          text(". I contribute to"),
+          mk_link("/projects", " various Open Source projects "),
+          text("for work and during my free time."),
+        ]),
       ]),
     ]),
   ])
@@ -272,13 +291,19 @@ fn view_project(project: Project) {
         ]),
       ])
     }
-    GithubProject(name, org, contrib_desc, Some(ri)) -> {
+    GithubProject(name, org, contrib_desc, owner, Some(ri)) -> {
       div([], [
         div([class("flex justify-between")], [
-          mk_link("https://github.com/" <> org <> "/" <> name, name),
+          div([class("flex gap-1")], [
+            mk_link("https://github.com/" <> org <> "/" <> name, name),
+            case owner {
+              True -> text("(owner)")
+              False -> none()
+            },
+          ]),
           div([class("flex flex-row gap-2")], [
-            div([], [text("stars: " <> ri.stars |> int.to_string)]),
-            div([], [text("language: " <> ri.language)]),
+            div([], [text(ri.stars |> int.to_string <> "⭐")]),
+            div([], [text(ri.language)]),
           ]),
         ]),
         div([class("grid gap-1")], [
@@ -287,7 +312,7 @@ fn view_project(project: Project) {
         ]),
       ])
     }
-    GithubProject(name, org, contrib_desc, None) -> {
+    GithubProject(name, org, contrib_desc, _, None) -> {
       div([], [
         div([class("flex justify-between")], [
           mk_link("https://github.com/" <> org <> "/" <> name, name),
@@ -326,23 +351,26 @@ fn view_articles(_model) {
 
 fn view(model: Model) {
   // Set flex and ensure the container is centered
-  div([class("flex flex-row justify-center h-screen bg-blue-100")], [
-    // Ensure we are not using to full wide size
-    div([class("basis-10/12")], [
-      div([class("pt-1 w-full max-w-5xl mx-auto")], [
-        div([class("p-1 border-2 border-blue-200")], [
-          nav([class("flex gap-2")], [
-            mk_link("/", "Home"),
-            mk_link("/projects", "Projects"),
-            mk_link("/articles", "Articles"),
+  div(
+    [class("flex flex-row justify-center h-screen bg-zinc-800 text-teal-200")],
+    [
+      // Ensure we are not using to full wide size
+      div([class("basis-10/12")], [
+        div([class("pt-1 w-full max-w-5xl mx-auto")], [
+          div([class("p-1 border-2 border-indigo-500 bg-zinc-900")], [
+            nav([class("flex gap-2")], [
+              mk_link("/", "Home"),
+              mk_link("/projects", "Projects"),
+              mk_link("/articles", "Articles"),
+            ]),
           ]),
+          case model.route {
+            Home -> view_home(model)
+            Projects -> view_projects(model)
+            Articles -> view_articles(model)
+          },
         ]),
-        case model.route {
-          Home -> view_home(model)
-          Projects -> view_projects(model)
-          Articles -> view_articles(model)
-        },
       ]),
-    ]),
-  ])
+    ],
+  )
 }
