@@ -37,6 +37,12 @@ type Model {
   Model(route: Route, projects: List(Project))
 }
 
+type Ptype {
+  Owner
+  Work
+  Other
+}
+
 // TODO: Add start and end date
 type Project {
   GenericProject(
@@ -45,12 +51,15 @@ type Project {
     repo_url: String,
     langs: List(String),
     contrib_desc: String,
+    contrib_link: Option(String),
+    project_type: Ptype,
   )
   GithubProject(
     name: String,
     org: String,
     contrib_desc: String,
-    owner: Bool,
+    project_type: Ptype,
+    show_changes: Bool,
     remote_info: Option(GitHubProjectRemoteInfo),
   )
 }
@@ -99,7 +108,7 @@ fn update(model: Model, msg) -> #(Model, Effect(Msg)) {
       io.debug(remote_project_info)
       let update_project = fn(project: Project) -> Project {
         case project {
-          GithubProject(name, org, contrib_desc, owner, _) -> {
+          GithubProject(name, org, contrib_desc, owner, show_changes, _) -> {
             case { org <> "/" <> name == remote_project_info.full_name } {
               True -> {
                 GithubProject(
@@ -107,6 +116,7 @@ fn update(model: Model, msg) -> #(Model, Effect(Msg)) {
                   org,
                   contrib_desc,
                   owner,
+                  show_changes,
                   Some(remote_project_info),
                 )
               }
@@ -136,6 +146,7 @@ fn main_projects() -> List(Project) {
       "I started this project and I'm on of the main contributors of this project. "
         <> "The project has been initially started in Python, then for the fun and "
         <> "with the help of a colleague we migrated the code to Haskell.",
+      Owner,
       True,
       None,
     ),
@@ -143,7 +154,8 @@ fn main_projects() -> List(Project) {
       "repoxplorer",
       "morucci",
       "I started this project and was the main contribution on it",
-      True,
+      Owner,
+      False,
       None,
     ),
     GenericProject(
@@ -154,11 +166,14 @@ fn main_projects() -> List(Project) {
       ["Ansible", "Python"],
       "I'm working on this project with my co-workers. It is an infrastucture project and I used to"
         <> " provide improvements on the code base.",
+      None,
+      Work,
     ),
     GithubProject(
       "sf-operator",
       "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
+      Work,
       False,
       None,
     ),
@@ -168,40 +183,49 @@ fn main_projects() -> List(Project) {
       "https://opendev.org/zuul/zuul",
       ["Python", "TypeScript"],
       "I've contributed several improvment to Zuul, mainly the Git, Pagure, ElasticSearch and GitLab driver",
+      Some(
+        "https://review.opendev.org/q/project:+zuul/zuul+author:%22Fabien+Boucher%22+status:merged",
+      ),
+      Work,
     ),
     GithubProject(
       "HazardHunter",
       "web-apps-lab",
       "Wanted to challenge myself to leverage HTMX via ButlerOS.",
-      True,
+      Owner,
+      False,
       None,
     ),
     GithubProject(
       "MemoryMaster",
       "web-apps-lab",
       "A second game after HazardHunter and because it was fun to build.",
-      True,
+      Owner,
+      False,
       None,
     ),
     GithubProject(
       "FreeSnaky",
       "morucci",
       "A challenge to learn more about Haskell, the Brick engine and capability to have the whole game logic handled server side and the terminal UI to be just a dumb display.",
-      True,
+      Owner,
+      False,
       None,
     ),
     GithubProject(
       "schat",
       "morucci",
       "This is a learning project around Haskell and HTMX.",
-      True,
+      Owner,
+      False,
       None,
     ),
     GithubProject(
       "bbot",
       "morucci",
       "A little project I've wrote mainly to learn about OCaml.",
-      True,
+      Owner,
+      False,
       None,
     ),
     GenericProject(
@@ -210,13 +234,49 @@ fn main_projects() -> List(Project) {
       "https://pagure.io/fm-gateway",
       ["Python"],
       "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge",
+      Some("https://pagure.io/fm-gateway/commits?author=fboucher@redhat.com"),
+      Work,
     ),
     GithubProject(
       "pidstat-grapher",
       "morucci",
       "Project I wrote due to a need to plot system processes resources consumption",
-      True,
+      Owner,
+      False,
       None,
+    ),
+    GenericProject(
+      "openstack/swift",
+      "Openstack Object Storage",
+      "https://opendev.org/openstack/swift",
+      ["Python"],
+      "I've mainly worked on the Quota middleware.",
+      Some(
+        "https://review.opendev.org/q/project:+openstack/swift+author:%22Fabien%20Boucher%22+status:merged",
+      ),
+      Work,
+    ),
+    GenericProject(
+      "zuul-distro-jobs",
+      "A library of Zuul jobs for RPM packages build/test integrations",
+      "https://pagure.io/zuul-distro-jobs",
+      ["Ansible"],
+      "I've created that project in order to leverage Zuul CI for RPM based distribution CI purpose",
+      Some(
+        "https://pagure.io/zuul-distro-jobs/commits?author=fboucher@redhat.com",
+      ),
+      Work,
+    ),
+    GenericProject(
+      "fedora-project-config",
+      "The main Zuul job defintion of Fedora Zuul CI",
+      "https://pagure.io/fedora-project-config",
+      ["Ansible", "Dhall"],
+      "I've initialized this project, based on Zuul and zuul-distro-jobs, to provide CI jobs for validating Fedora packaging.",
+      Some(
+        "https://pagure.io/fedora-project-config/commits?author=fboucher@redhat.com",
+      ),
+      Work,
     ),
   ]
 }
@@ -228,7 +288,7 @@ fn mk_link(link: String, link_text: String) -> Element(a) {
 fn mk_page_title(title: String) -> Element(a) {
   // Set the title in a grid and use the grid centering parameter
   div([class("grid pt-2 pb-6 justify-items-center")], [
-    h1([class("text-2xl font-bold")], [text(title)]),
+    h1([class("text-3xl font-bold")], [text(title)]),
   ])
 }
 
@@ -236,10 +296,18 @@ fn build_full_name(org: String, name: String) -> String {
   org <> "/" <> name
 }
 
+fn mk_github_contrib_link(name: String, org: String) {
+  "https://github.com/"
+  <> org
+  <> "/"
+  <> name
+  <> "/pulls?q=is%3Apr+is%3Aclosed+author%3Amorucci+"
+}
+
 fn get_project(project: Project) -> Effect(Msg) {
   case project {
-    GenericProject(_, _, _, _, _) -> effect.none()
-    GithubProject(name, org, _, _, Some(_)) -> {
+    GenericProject(..) -> effect.none()
+    GithubProject(name, org, _, _, _, Some(_)) -> {
       io.debug(
         "remote infos for alreay for "
         <> build_full_name(org, name)
@@ -247,7 +315,7 @@ fn get_project(project: Project) -> Effect(Msg) {
       )
       effect.none()
     }
-    GithubProject(name, org, _, _, None) -> {
+    GithubProject(name, org, _, _, _, None) -> {
       io.debug("fetching remote infos for " <> build_full_name(org, name))
       let decoder =
         dynamic.decode4(
@@ -279,7 +347,7 @@ fn view_home(_model) {
             "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer.",
           ),
           text(
-            " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and",
+            " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and for",
           ),
           mk_link("https://www.rdoproject.org", " RDO"),
           text(". I contribute to"),
@@ -293,11 +361,25 @@ fn view_home(_model) {
 
 fn view_project(project: Project) {
   case project {
-    GenericProject(name, desc, repo_url, langs, contrib_desc) -> {
+    GenericProject(
+      name,
+      desc,
+      repo_url,
+      langs,
+      contrib_desc,
+      contrib_link,
+      _ptype,
+    ) -> {
       div([], [
         div([class("flex justify-between")], [
           mk_link(repo_url, name),
-          div([], [langs |> string.join("/") |> text]),
+          div([class("flex flex-row gap-2")], [
+            case contrib_link {
+              Some(link) -> mk_link(link, "(changes)")
+              None -> element.none()
+            },
+            div([], [langs |> string.join("/") |> text]),
+          ]),
         ]),
         div([class("grid gap-1")], [
           div([], [text(desc)]),
@@ -305,17 +387,20 @@ fn view_project(project: Project) {
         ]),
       ])
     }
-    GithubProject(name, org, contrib_desc, owner, Some(ri)) -> {
+    GithubProject(name, org, contrib_desc, _, show_changes, Some(ri)) -> {
       div([], [
         div([class("flex justify-between")], [
           div([class("flex gap-1")], [
             mk_link("https://github.com/" <> org <> "/" <> name, name),
-            case owner {
-              True -> text("(owner)")
-              False -> none()
-            },
           ]),
           div([class("flex flex-row gap-2")], [
+            case show_changes {
+              True ->
+                div([], [
+                  mk_link(mk_github_contrib_link(name, org), "(changes)"),
+                ])
+              False -> element.none()
+            },
             div([], [text(ri.stars |> int.to_string <> "⭐")]),
             div([], [text(ri.language)]),
           ]),
@@ -326,32 +411,51 @@ fn view_project(project: Project) {
         ]),
       ])
     }
-    GithubProject(name, org, contrib_desc, _, None) -> {
-      div([], [
-        div([class("flex justify-between")], [
-          mk_link("https://github.com/" <> org <> "/" <> name, name),
-        ]),
-        div([class("grid gap-1")], [div([], [text(contrib_desc)])]),
-      ])
-    }
+    _ -> element.none()
   }
 }
 
 fn view_projects(model: Model) {
+  let section_title = fn(title: String) {
+    h2([class("text-2xl font-bold text-blue-100")], [text(title)])
+  }
   div([], [
     div([], [mk_page_title("Projects")]),
-    div([class("grid gap-2")], [
+    div([class("grid gap-6")], [
       div([class("grid gap-1")], [
-        h2([class("text-1xl font-bold")], [
-          text("I have significant contributions to the following projects"),
-        ]),
-        div([class("grid gap-2")], model.projects |> list.map(view_project)),
+        section_title("Projects I have originaly created"),
+        div(
+          [class("grid gap-2")],
+          model.projects
+            |> list.filter(fn(p) {
+              case p {
+                GithubProject(project_type: Owner, ..) -> True
+                GenericProject(project_type: Owner, ..) -> True
+                _ -> False
+              }
+            })
+            |> list.map(view_project),
+        ),
+      ]),
+      div([class("grid gap-1")], [
+        section_title("Projects I've contributed to for my employer"),
+        div(
+          [class("grid gap-2")],
+          model.projects
+            |> list.filter(fn(p) {
+              case p {
+                GithubProject(project_type: Work, ..) -> True
+                GenericProject(project_type: Work, ..) -> True
+                _ -> False
+              }
+            })
+            |> list.map(view_project),
+        ),
       ]),
       div([class("grid gap-1")], [
         h2([class("text-1xl font-bold")], [
           text("I did some contributions to the following projects"),
         ]),
-        div([], [text("OpenStack Swift")]),
         div([], [text("Dulwich")]),
         div([], [text("ButlerOS")]),
       ]),

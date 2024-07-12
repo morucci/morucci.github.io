@@ -1346,6 +1346,33 @@ function first(list) {
     return new Ok(x);
   }
 }
+function do_filter(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let x = list.head;
+      let xs = list.tail;
+      let new_acc = (() => {
+        let $ = fun(x);
+        if ($) {
+          return prepend(x, acc);
+        } else {
+          return acc;
+        }
+      })();
+      loop$list = xs;
+      loop$fun = fun;
+      loop$acc = new_acc;
+    }
+  }
+}
+function filter(list, predicate) {
+  return do_filter(list, predicate, toList([]));
+}
 function do_map(loop$list, loop$fun, loop$acc) {
   while (true) {
     let list = loop$list;
@@ -3175,23 +3202,30 @@ var Model = class extends CustomType {
     this.projects = projects;
   }
 };
+var Owner = class extends CustomType {
+};
+var Work = class extends CustomType {
+};
 var GenericProject = class extends CustomType {
-  constructor(name, desc, repo_url, langs, contrib_desc) {
+  constructor(name, desc, repo_url, langs, contrib_desc, contrib_link, project_type) {
     super();
     this.name = name;
     this.desc = desc;
     this.repo_url = repo_url;
     this.langs = langs;
     this.contrib_desc = contrib_desc;
+    this.contrib_link = contrib_link;
+    this.project_type = project_type;
   }
 };
 var GithubProject = class extends CustomType {
-  constructor(name, org, contrib_desc, owner, remote_info) {
+  constructor(name, org, contrib_desc, project_type, show_changes, remote_info) {
     super();
     this.name = name;
     this.org = org;
     this.contrib_desc = contrib_desc;
-    this.owner = owner;
+    this.project_type = project_type;
+    this.show_changes = show_changes;
     this.remote_info = remote_info;
   }
 };
@@ -3214,6 +3248,7 @@ function main_projects() {
       "monocle",
       "change-metrics",
       "I started this project and I'm on of the main contributors of this project. The project has been initially started in Python, then for the fun and with the help of a colleague we migrated the code to Haskell.",
+      new Owner(),
       true,
       new None()
     ),
@@ -3221,7 +3256,8 @@ function main_projects() {
       "repoxplorer",
       "morucci",
       "I started this project and was the main contribution on it",
-      true,
+      new Owner(),
+      false,
       new None()
     ),
     new GenericProject(
@@ -3229,12 +3265,15 @@ function main_projects() {
       " This project help us to maintain a development forge with Zuul as the main component for the CI/CD",
       "https://www.softwarefactory-project.io",
       toList(["Ansible", "Python"]),
-      "I'm working on this project with my co-workers. It is an infrastucture project and I used to provide improvements on the code base."
+      "I'm working on this project with my co-workers. It is an infrastucture project and I used to provide improvements on the code base.",
+      new None(),
+      new Work()
     ),
     new GithubProject(
       "sf-operator",
       "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
+      new Work(),
       false,
       new None()
     ),
@@ -3243,41 +3282,50 @@ function main_projects() {
       "This an Opendev's project initialy developed for the OpenStack project CI.",
       "https://opendev.org/zuul/zuul",
       toList(["Python", "TypeScript"]),
-      "I've contributed several improvment to Zuul, mainly the Git, Pagure, ElasticSearch and GitLab driver"
+      "I've contributed several improvment to Zuul, mainly the Git, Pagure, ElasticSearch and GitLab driver",
+      new Some(
+        "https://review.opendev.org/q/project:+zuul/zuul+author:%22Fabien+Boucher%22+status:merged"
+      ),
+      new Work()
     ),
     new GithubProject(
       "HazardHunter",
       "web-apps-lab",
       "Wanted to challenge myself to leverage HTMX via ButlerOS.",
-      true,
+      new Owner(),
+      false,
       new None()
     ),
     new GithubProject(
       "MemoryMaster",
       "web-apps-lab",
       "A second game after HazardHunter and because it was fun to build.",
-      true,
+      new Owner(),
+      false,
       new None()
     ),
     new GithubProject(
       "FreeSnaky",
       "morucci",
       "A challenge to learn more about Haskell, the Brick engine and capability to have the whole game logic handled server side and the terminal UI to be just a dumb display.",
-      true,
+      new Owner(),
+      false,
       new None()
     ),
     new GithubProject(
       "schat",
       "morucci",
       "This is a learning project around Haskell and HTMX.",
-      true,
+      new Owner(),
+      false,
       new None()
     ),
     new GithubProject(
       "bbot",
       "morucci",
       "A little project I've wrote mainly to learn about OCaml.",
-      true,
+      new Owner(),
+      false,
       new None()
     ),
     new GenericProject(
@@ -3285,14 +3333,52 @@ function main_projects() {
       "Gateway to send fedora-messaging messages to the Zuul Pagure driver web-hook service.",
       "https://pagure.io/fm-gateway",
       toList(["Python"]),
-      "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge"
+      "I've build that project to solve an integration issue between Zuul and the Fedora Pagure Forge",
+      new Some(
+        "https://pagure.io/fm-gateway/commits?author=fboucher@redhat.com"
+      ),
+      new Work()
     ),
     new GithubProject(
       "pidstat-grapher",
       "morucci",
       "Project I wrote due to a need to plot system processes resources consumption",
-      true,
+      new Owner(),
+      false,
       new None()
+    ),
+    new GenericProject(
+      "openstack/swift",
+      "Openstack Object Storage",
+      "https://opendev.org/openstack/swift",
+      toList(["Python"]),
+      "I've mainly worked on the Quota middleware.",
+      new Some(
+        "https://review.opendev.org/q/project:+openstack/swift+author:%22Fabien%20Boucher%22+status:merged"
+      ),
+      new Work()
+    ),
+    new GenericProject(
+      "zuul-distro-jobs",
+      "A library of Zuul jobs for RPM packages build/test integrations",
+      "https://pagure.io/zuul-distro-jobs",
+      toList(["Ansible"]),
+      "I've created that project in order to leverage Zuul CI for RPM based distribution CI purpose",
+      new Some(
+        "https://pagure.io/zuul-distro-jobs/commits?author=fboucher@redhat.com"
+      ),
+      new Work()
+    ),
+    new GenericProject(
+      "fedora-project-config",
+      "The main Zuul job defintion of Fedora Zuul CI",
+      "https://pagure.io/fedora-project-config",
+      toList(["Ansible", "Dhall"]),
+      "I've initialized this project, based on Zuul and zuul-distro-jobs, to provide CI jobs for validating Fedora packaging.",
+      new Some(
+        "https://pagure.io/fedora-project-config/commits?author=fboucher@redhat.com"
+      ),
+      new Work()
     )
   ]);
 }
@@ -3305,11 +3391,14 @@ function mk_link(link, link_text) {
 function mk_page_title(title) {
   return div(
     toList([class$("grid pt-2 pb-6 justify-items-center")]),
-    toList([h1(toList([class$("text-2xl font-bold")]), toList([text(title)]))])
+    toList([h1(toList([class$("text-3xl font-bold")]), toList([text(title)]))])
   );
 }
 function build_full_name(org, name) {
   return org + "/" + name;
+}
+function mk_github_contrib_link(name, org) {
+  return "https://github.com/" + org + "/" + name + "/pulls?q=is%3Apr+is%3Aclosed+author%3Amorucci+";
 }
 function get_project(project) {
   if (project instanceof GenericProject) {
@@ -3389,7 +3478,8 @@ function update(model, msg) {
         let name = project.name;
         let org = project.org;
         let contrib_desc = project.contrib_desc;
-        let owner = project.owner;
+        let owner = project.project_type;
+        let show_changes = project.show_changes;
         let $ = org + "/" + name === remote_project_info.full_name;
         if ($) {
           return new GithubProject(
@@ -3397,6 +3487,7 @@ function update(model, msg) {
             org,
             contrib_desc,
             owner,
+            show_changes,
             new Some(remote_project_info)
           );
         } else {
@@ -3450,7 +3541,7 @@ function view_home(_) {
                     "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer."
                   ),
                   text(
-                    " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and"
+                    " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and for"
                   ),
                   mk_link("https://www.rdoproject.org", " RDO"),
                   text(". I contribute to"),
@@ -3472,6 +3563,7 @@ function view_project(project) {
     let repo_url = project.repo_url;
     let langs = project.langs;
     let contrib_desc = project.contrib_desc;
+    let contrib_link = project.contrib_link;
     return div(
       toList([]),
       toList([
@@ -3480,13 +3572,26 @@ function view_project(project) {
           toList([
             mk_link(repo_url, name),
             div(
-              toList([]),
+              toList([class$("flex flex-row gap-2")]),
               toList([
                 (() => {
-                  let _pipe = langs;
-                  let _pipe$1 = join2(_pipe, "/");
-                  return text(_pipe$1);
-                })()
+                  if (contrib_link instanceof Some) {
+                    let link = contrib_link[0];
+                    return mk_link(link, "(changes)");
+                  } else {
+                    return none2();
+                  }
+                })(),
+                div(
+                  toList([]),
+                  toList([
+                    (() => {
+                      let _pipe = langs;
+                      let _pipe$1 = join2(_pipe, "/");
+                      return text(_pipe$1);
+                    })()
+                  ])
+                )
               ])
             )
           ])
@@ -3504,7 +3609,7 @@ function view_project(project) {
     let name = project.name;
     let org = project.org;
     let contrib_desc = project.contrib_desc;
-    let owner = project.owner;
+    let show_changes = project.show_changes;
     let ri = project.remote_info[0];
     return div(
       toList([]),
@@ -3515,19 +3620,24 @@ function view_project(project) {
             div(
               toList([class$("flex gap-1")]),
               toList([
-                mk_link("https://github.com/" + org + "/" + name, name),
-                (() => {
-                  if (owner) {
-                    return text("(owner)");
-                  } else {
-                    return none2();
-                  }
-                })()
+                mk_link("https://github.com/" + org + "/" + name, name)
               ])
             ),
             div(
               toList([class$("flex flex-row gap-2")]),
               toList([
+                (() => {
+                  if (show_changes) {
+                    return div(
+                      toList([]),
+                      toList([
+                        mk_link(mk_github_contrib_link(name, org), "(changes)")
+                      ])
+                    );
+                  } else {
+                    return none2();
+                  }
+                })(),
                 div(
                   toList([]),
                   toList([
@@ -3554,48 +3664,69 @@ function view_project(project) {
       ])
     );
   } else {
-    let name = project.name;
-    let org = project.org;
-    let contrib_desc = project.contrib_desc;
-    return div(
-      toList([]),
-      toList([
-        div(
-          toList([class$("flex justify-between")]),
-          toList([mk_link("https://github.com/" + org + "/" + name, name)])
-        ),
-        div(
-          toList([class$("grid gap-1")]),
-          toList([div(toList([]), toList([text(contrib_desc)]))])
-        )
-      ])
-    );
+    return none2();
   }
 }
 function view_projects(model) {
+  let section_title = (title) => {
+    return h2(
+      toList([class$("text-2xl font-bold text-blue-100")]),
+      toList([text(title)])
+    );
+  };
   return div(
     toList([]),
     toList([
       div(toList([]), toList([mk_page_title("Projects")])),
       div(
-        toList([class$("grid gap-2")]),
+        toList([class$("grid gap-6")]),
         toList([
           div(
             toList([class$("grid gap-1")]),
             toList([
-              h2(
-                toList([class$("text-1xl font-bold")]),
-                toList([
-                  text(
-                    "I have significant contributions to the following projects"
-                  )
-                ])
-              ),
+              section_title("Projects I have originaly created"),
               div(
                 toList([class$("grid gap-2")]),
                 (() => {
                   let _pipe = model.projects;
-                  return map2(_pipe, view_project);
+                  let _pipe$1 = filter(
+                    _pipe,
+                    (p2) => {
+                      if (p2 instanceof GithubProject && p2.project_type instanceof Owner) {
+                        return true;
+                      } else if (p2 instanceof GenericProject && p2.project_type instanceof Owner) {
+                        return true;
+                      } else {
+                        return false;
+                      }
+                    }
+                  );
+                  return map2(_pipe$1, view_project);
+                })()
+              )
+            ])
+          ),
+          div(
+            toList([class$("grid gap-1")]),
+            toList([
+              section_title("Projects I've contributed to for my employer"),
+              div(
+                toList([class$("grid gap-2")]),
+                (() => {
+                  let _pipe = model.projects;
+                  let _pipe$1 = filter(
+                    _pipe,
+                    (p2) => {
+                      if (p2 instanceof GithubProject && p2.project_type instanceof Work) {
+                        return true;
+                      } else if (p2 instanceof GenericProject && p2.project_type instanceof Work) {
+                        return true;
+                      } else {
+                        return false;
+                      }
+                    }
+                  );
+                  return map2(_pipe$1, view_project);
                 })()
               )
             ])
@@ -3609,7 +3740,6 @@ function view_projects(model) {
                   text("I did some contributions to the following projects")
                 ])
               ),
-              div(toList([]), toList([text("OpenStack Swift")])),
               div(toList([]), toList([text("Dulwich")])),
               div(toList([]), toList([text("ButlerOS")]))
             ])
@@ -3673,7 +3803,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      60,
+      69,
       "main",
       "Assignment pattern did not match",
       { value: $ }
