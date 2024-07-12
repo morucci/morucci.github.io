@@ -1296,8 +1296,8 @@ function inspectCustomType(record) {
   }).join(", ");
   return props ? `${record.constructor.name}(${props})` : record.constructor.name;
 }
-function inspectList(list) {
-  return `[${list.toArray().map(inspect).join(", ")}]`;
+function inspectList(list2) {
+  return `[${list2.toArray().map(inspect).join(", ")}]`;
 }
 function inspectBitArray(bits) {
   return `<<${Array.from(bits.buffer).join(", ")}>>`;
@@ -1338,24 +1338,24 @@ function do_reverse(loop$remaining, loop$accumulator) {
 function reverse(xs) {
   return do_reverse(xs, toList([]));
 }
-function first(list) {
-  if (list.hasLength(0)) {
+function first(list2) {
+  if (list2.hasLength(0)) {
     return new Error(void 0);
   } else {
-    let x = list.head;
+    let x = list2.head;
     return new Ok(x);
   }
 }
 function do_filter(loop$list, loop$fun, loop$acc) {
   while (true) {
-    let list = loop$list;
+    let list2 = loop$list;
     let fun = loop$fun;
     let acc = loop$acc;
-    if (list.hasLength(0)) {
+    if (list2.hasLength(0)) {
       return reverse(acc);
     } else {
-      let x = list.head;
-      let xs = list.tail;
+      let x = list2.head;
+      let xs = list2.tail;
       let new_acc = (() => {
         let $ = fun(x);
         if ($) {
@@ -1370,27 +1370,27 @@ function do_filter(loop$list, loop$fun, loop$acc) {
     }
   }
 }
-function filter(list, predicate) {
-  return do_filter(list, predicate, toList([]));
+function filter(list2, predicate) {
+  return do_filter(list2, predicate, toList([]));
 }
 function do_map(loop$list, loop$fun, loop$acc) {
   while (true) {
-    let list = loop$list;
+    let list2 = loop$list;
     let fun = loop$fun;
     let acc = loop$acc;
-    if (list.hasLength(0)) {
+    if (list2.hasLength(0)) {
       return reverse(acc);
     } else {
-      let x = list.head;
-      let xs = list.tail;
+      let x = list2.head;
+      let xs = list2.tail;
       loop$list = xs;
       loop$fun = fun;
       loop$acc = prepend(fun(x), acc);
     }
   }
 }
-function map2(list, fun) {
-  return do_map(list, fun, toList([]));
+function map2(list2, fun) {
+  return do_map(list2, fun, toList([]));
 }
 function do_append(loop$first, loop$second) {
   while (true) {
@@ -1430,10 +1430,10 @@ function do_concat(loop$lists, loop$acc) {
     if (lists.hasLength(0)) {
       return reverse(acc);
     } else {
-      let list = lists.head;
+      let list2 = lists.head;
       let further_lists = lists.tail;
       loop$lists = further_lists;
-      loop$acc = reverse_and_prepend(list, acc);
+      loop$acc = reverse_and_prepend(list2, acc);
     }
   }
 }
@@ -1442,14 +1442,14 @@ function concat2(lists) {
 }
 function fold(loop$list, loop$initial, loop$fun) {
   while (true) {
-    let list = loop$list;
+    let list2 = loop$list;
     let initial = loop$initial;
     let fun = loop$fun;
-    if (list.hasLength(0)) {
+    if (list2.hasLength(0)) {
       return initial;
     } else {
-      let x = list.head;
-      let rest$1 = list.tail;
+      let x = list2.head;
+      let rest$1 = list2.tail;
       loop$list = rest$1;
       loop$initial = fun(initial, x);
       loop$fun = fun;
@@ -1750,24 +1750,24 @@ function noneify_empty_string(x) {
 }
 function extra_required(loop$list, loop$remaining) {
   while (true) {
-    let list = loop$list;
+    let list2 = loop$list;
     let remaining = loop$remaining;
     if (remaining === 0) {
       return 0;
-    } else if (list.hasLength(0)) {
+    } else if (list2.hasLength(0)) {
       return remaining;
     } else {
-      let xs = list.tail;
+      let xs = list2.tail;
       loop$list = xs;
       loop$remaining = remaining - 1;
     }
   }
 }
-function pad_list(list, size) {
-  let _pipe = list;
+function pad_list(list2, size) {
+  let _pipe = list2;
   return append(
     _pipe,
-    repeat(new None(), extra_required(list, size))
+    repeat(new None(), extra_required(list2, size))
   );
 }
 function split_authority(authority) {
@@ -3167,13 +3167,7 @@ function init2(handler) {
   );
 }
 
-// build/dev/javascript/web/web.mjs
-var Home = class extends CustomType {
-};
-var Projects = class extends CustomType {
-};
-var Articles = class extends CustomType {
-};
+// build/dev/javascript/web/web/github.mjs
 var GitHubProjectRemoteInfo = class extends CustomType {
   constructor(full_name, stars, language, description) {
     super();
@@ -3183,28 +3177,13 @@ var GitHubProjectRemoteInfo = class extends CustomType {
     this.description = description;
   }
 };
-var OnRouteChange = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-var OnGotGitHubProject = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-var Model = class extends CustomType {
-  constructor(route, projects) {
-    super();
-    this.route = route;
-    this.projects = projects;
-  }
-};
+
+// build/dev/javascript/web/web/projects.mjs
 var Owner = class extends CustomType {
 };
 var Work = class extends CustomType {
+};
+var Other = class extends CustomType {
 };
 var GenericProject = class extends CustomType {
   constructor(name, desc, repo_url, langs, contrib_desc, contrib_link, project_type) {
@@ -3229,20 +3208,7 @@ var GithubProject = class extends CustomType {
     this.remote_info = remote_info;
   }
 };
-function uri_to_route(uri) {
-  let $ = path_segments(uri.path);
-  if ($.hasLength(1) && $.head === "projects") {
-    return new Projects();
-  } else if ($.hasLength(1) && $.head === "articles") {
-    return new Articles();
-  } else {
-    return new Home();
-  }
-}
-function on_url_change(uri) {
-  return new OnRouteChange(uri_to_route(uri));
-}
-function main_projects() {
+function list() {
   return toList([
     new GithubProject(
       "monocle",
@@ -3379,8 +3345,64 @@ function main_projects() {
         "https://pagure.io/fedora-project-config/commits?author=fboucher@redhat.com"
       ),
       new Work()
+    ),
+    new GithubProject(
+      "dulwich",
+      "jelmer",
+      "I contributed a GIT store backend based on an OpenStack Swift object store.",
+      new Other(),
+      false,
+      new None()
+    ),
+    new GithubProject(
+      "haskell-butler",
+      "ButlerOS",
+      "I contributed a login system based on OpenID Connect.",
+      new Other(),
+      false,
+      new None()
     )
   ]);
+}
+
+// build/dev/javascript/web/web.mjs
+var Home = class extends CustomType {
+};
+var Projects = class extends CustomType {
+};
+var Articles = class extends CustomType {
+};
+var OnRouteChange = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var OnGotGitHubProject = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var Model = class extends CustomType {
+  constructor(route, projects) {
+    super();
+    this.route = route;
+    this.projects = projects;
+  }
+};
+function uri_to_route(uri) {
+  let $ = path_segments(uri.path);
+  if ($.hasLength(1) && $.head === "projects") {
+    return new Projects();
+  } else if ($.hasLength(1) && $.head === "articles") {
+    return new Articles();
+  } else {
+    return new Home();
+  }
+}
+function on_url_change(uri) {
+  return new OnRouteChange(uri_to_route(uri));
 }
 function mk_link(link, link_text) {
   return a(
@@ -3446,9 +3468,9 @@ function init3(_) {
     }
   })();
   return [
-    new Model(route, main_projects()),
+    new Model(route, list()),
     (() => {
-      let _pipe = main_projects();
+      let _pipe = list();
       let _pipe$1 = map2(_pipe, get_project);
       let _pipe$2 = append(_pipe$1, toList([init2(on_url_change)]));
       return batch(_pipe$2);
@@ -3734,14 +3756,26 @@ function view_projects(model) {
           div(
             toList([class$("grid gap-1")]),
             toList([
-              h2(
-                toList([class$("text-1xl font-bold")]),
-                toList([
-                  text("I did some contributions to the following projects")
-                ])
-              ),
-              div(toList([]), toList([text("Dulwich")])),
-              div(toList([]), toList([text("ButlerOS")]))
+              section_title("Projects I've contributed during my free time"),
+              div(
+                toList([class$("grid gap-2")]),
+                (() => {
+                  let _pipe = model.projects;
+                  let _pipe$1 = filter(
+                    _pipe,
+                    (p2) => {
+                      if (p2 instanceof GithubProject && p2.project_type instanceof Other) {
+                        return true;
+                      } else if (p2 instanceof GenericProject && p2.project_type instanceof Other) {
+                        return true;
+                      } else {
+                        return false;
+                      }
+                    }
+                  );
+                  return map2(_pipe$1, view_project);
+                })()
+              )
             ])
           )
         ])
@@ -3803,7 +3837,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "web",
-      69,
+      37,
       "main",
       "Assignment pattern did not match",
       { value: $ }
