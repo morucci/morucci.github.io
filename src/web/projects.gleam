@@ -1,32 +1,18 @@
-import gleam/option.{type Option, None, Some}
-import web/github
-
-pub type Ptype {
-  Owner
-  Work
-  Other
+import gleam/int
+import gleam/io
+import gleam/list
+import gleam/option.{None, Some}
+import gleam/string
+import lustre/attribute.{class}
+import lustre/effect.{type Effect}
+import lustre/element.{none}
+import lustre/element/html.{div, h2, text}
+import web/github.{mk_github_contrib_link}
+import web/types.{
+  type Model, type Msg, type Project, GenericProject, GithubProject, Other,
+  Owner, Work,
 }
-
-// TODO: Add start and end date
-pub type Project {
-  GenericProject(
-    name: String,
-    desc: String,
-    repo_url: String,
-    langs: List(String),
-    contrib_desc: String,
-    contrib_link: Option(String),
-    project_type: Ptype,
-  )
-  GithubProject(
-    name: String,
-    org: String,
-    contrib_desc: String,
-    project_type: Ptype,
-    show_changes: Bool,
-    remote_info: Option(github.GitHubProjectRemoteInfo),
-  )
-}
+import web/utils.{mk_link, mk_page_title}
 
 pub fn list() -> List(Project) {
   [
@@ -185,4 +171,131 @@ pub fn list() -> List(Project) {
       None,
     ),
   ]
+}
+
+pub fn get_project(project: Project) -> Effect(Msg) {
+  case project {
+    GenericProject(..) -> effect.none()
+    GithubProject(name, org, _, _, _, Some(_)) -> {
+      io.debug(
+        "remote infos for alreay for "
+        <> github.build_full_name(org, name)
+        <> " already in app state",
+      )
+      effect.none()
+    }
+    GithubProject(name, org, _, _, _, None) -> github.get_project(name, org)
+  }
+}
+
+fn view_project(project: Project) {
+  case project {
+    GenericProject(
+      name,
+      desc,
+      repo_url,
+      langs,
+      contrib_desc,
+      contrib_link,
+      _ptype,
+    ) -> {
+      div([], [
+        div([class("flex justify-between")], [
+          mk_link(repo_url, name),
+          div([class("flex flex-row gap-2")], [
+            case contrib_link {
+              Some(link) -> mk_link(link, "(changes)")
+              None -> none()
+            },
+            div([], [langs |> string.join("/") |> text]),
+          ]),
+        ]),
+        div([class("grid gap-1")], [
+          div([], [text(desc)]),
+          div([], [text(contrib_desc)]),
+        ]),
+      ])
+    }
+    GithubProject(name, org, contrib_desc, _, show_changes, Some(ri)) -> {
+      div([], [
+        div([class("flex justify-between")], [
+          div([class("flex gap-1")], [
+            mk_link("https://github.com/" <> org <> "/" <> name, name),
+          ]),
+          div([class("flex flex-row gap-2")], [
+            case show_changes {
+              True ->
+                div([], [
+                  mk_link(mk_github_contrib_link(name, org), "(changes)"),
+                ])
+              False -> none()
+            },
+            div([], [text(ri.stars |> int.to_string <> "⭐")]),
+            div([], [text(ri.language)]),
+          ]),
+        ]),
+        div([class("grid gap-1")], [
+          div([], [text(ri.description |> option.unwrap("No description"))]),
+          div([], [text(contrib_desc)]),
+        ]),
+      ])
+    }
+    _ -> none()
+  }
+}
+
+pub fn view_projects(model: Model) {
+  let section_title = fn(title: String) {
+    h2([class("text-2xl font-bold text-blue-100")], [text(title)])
+  }
+  div([], [
+    div([], [mk_page_title("Projects")]),
+    div([class("grid gap-6")], [
+      div([class("grid gap-1")], [
+        section_title("Projects I have originaly created"),
+        div(
+          [class("grid gap-2")],
+          model.projects
+            |> list.filter(fn(p) {
+              case p {
+                GithubProject(project_type: Owner, ..) -> True
+                GenericProject(project_type: Owner, ..) -> True
+                _ -> False
+              }
+            })
+            |> list.map(view_project),
+        ),
+      ]),
+      div([class("grid gap-1")], [
+        section_title("Projects I've contributed to for my employer"),
+        div(
+          [class("grid gap-2")],
+          model.projects
+            |> list.filter(fn(p) {
+              case p {
+                GithubProject(project_type: Work, ..) -> True
+                GenericProject(project_type: Work, ..) -> True
+                _ -> False
+              }
+            })
+            |> list.map(view_project),
+        ),
+      ]),
+      div([class("grid gap-1")], [
+        section_title("Projects I've contributed on my free time"),
+        div(
+          [class("grid gap-2")],
+          model.projects
+            |> list.filter(fn(p) {
+              case p {
+                GithubProject(project_type: Other, ..) -> True
+                GenericProject(project_type: Other, ..) -> True
+                _ -> False
+              }
+            })
+            |> list.map(view_project),
+        ),
+      ]),
+    ]),
+  ])
 }
