@@ -7,13 +7,13 @@ pub fn build_full_name(org: String, name: String) -> String {
   org <> "/" <> name
 }
 
-pub fn mk_changes_link(name: String, org: String) {
+pub fn mk_changes_url(name: String, org: String) {
   "https://github.com/"
   <> build_full_name(org, name)
   <> "/pulls?q=is%3Apr+is%3Aclosed+author%3Amorucci+"
 }
 
-pub fn mk_commits_link(name: String, org: String) {
+pub fn mk_commits_url(name: String, org: String) {
   "https://github.com/"
   <> build_full_name(org, name)
   <> "/commits/?author=morucci"

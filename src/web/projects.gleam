@@ -3,16 +3,40 @@ import gleam/io
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
-import lustre/attribute.{class}
+import lustre/attribute.{class, href}
 import lustre/effect.{type Effect}
 import lustre/element.{none}
-import lustre/element/html.{div, h2, text}
+import lustre/element/html.{a, div, h2, text}
+import lustre/element/svg.{path}
 import web/github
 import web/types.{
   type Model, type Msg, type Project, Changes, Commits, GenericProject,
   GithubProject, Other, Owner, Work,
 }
 import web/utils.{mk_link, mk_page_title}
+
+pub fn change_svg() {
+  let xmlns = attribute.attribute("xmlns", "http://www.w3.org/2000/svg")
+  let width = attribute.attribute("width", "1em")
+  let height = attribute.attribute("height", "1em")
+  let viewbox = attribute.attribute("viewBox", "0 0 24 24")
+  let fill = attribute.attribute("fill", "currentColor")
+  let d1 =
+    attribute.attribute(
+      "d",
+      "M16 19.25a3.25 3.25 0 1 1 6.5 0a3.25 3.25 0 0 1-6.5 0m-14.5 0a3.25 3.25 0 1 1 6.5 0a3.25 3.25 0 0 1-6.5 0m0-14.5a3.25 3.25 0 1 1 6.5 0a3.25 3.25 0 0 1-6.5 0M4.75 3a1.75 1.75 0 1 0 .001 3.501A1.75 1.75 0 0 0 4.75 3m0 14.5a1.75 1.75 0 1 0 .001 3.501A1.75 1.75 0 0 0 4.75 17.5m14.5 0a1.75 1.75 0 1 0 .001 3.501a1.75 1.75 0 0 0-.001-3.501",
+    )
+  let d2 =
+    attribute.attribute(
+      "d",
+      "M13.405 1.72a.75.75 0 0 1 0 1.06L12.185 4h4.065A3.75 3.75 0 0 1 20 7.75v8.75a.75.75 0 0 1-1.5 0V7.75a2.25 2.25 0 0 0-2.25-2.25h-4.064l1.22 1.22a.75.75 0 0 1-1.061 1.06l-2.5-2.5a.75.75 0 0 1 0-1.06l2.5-2.5a.75.75 0 0 1 1.06 0M4.75 7.25A.75.75 0 0 1 5.5 8v8A.75.75 0 0 1 4 16V8a.75.75 0 0 1 .75-.75",
+    )
+  svg.svg([xmlns, width, height, viewbox], [path([fill, d1]), path([fill, d2])])
+}
+
+pub fn mk_changes_link(link) {
+  a([class("text-indigo-500"), href(link)], [change_svg()])
+}
 
 pub fn list() -> List(Project) {
   [
@@ -42,7 +66,9 @@ pub fn list() -> List(Project) {
       ["Ansible", "Python"],
       "I'm working on this project with my co-workers. It is an infrastucture project and I used to"
         <> " provide improvements on the code base.",
-      None,
+      Some(
+        "https://softwarefactory-project.io/r/q/(projects:%2522software-factory%2522+author:%2522Fabien+Boucher%2522+status:merged)+AND+NOT+project:software-factory/sf-operator",
+      ),
       Work,
     ),
     GithubProject(
@@ -204,7 +230,7 @@ fn view_project(project: Project) {
           mk_link(repo_url, name),
           div([class("flex flex-row gap-2")], [
             case contrib_link {
-              Some(link) -> mk_link(link, "(my changes)")
+              Some(link) -> mk_changes_link(link)
               None -> none()
             },
             div([], [langs |> string.join("/") |> text]),
@@ -225,13 +251,9 @@ fn view_project(project: Project) {
           div([class("flex flex-row gap-2")], [
             case show_changes {
               Some(Changes) ->
-                div([], [
-                  mk_link(github.mk_changes_link(name, org), "(my changes)"),
-                ])
+                div([], [mk_changes_link(github.mk_changes_url(name, org))])
               Some(Commits) ->
-                div([], [
-                  mk_link(github.mk_commits_link(name, org), "(my commits)"),
-                ])
+                div([], [mk_changes_link(github.mk_changes_url(name, org))])
               None -> none()
             },
             div([], [text(ri.stars |> int.to_string <> "⭐")]),

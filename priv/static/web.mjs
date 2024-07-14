@@ -528,11 +528,11 @@ function split2(iodata, pattern) {
 
 // build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
 var DecodeError = class extends CustomType {
-  constructor(expected, found, path) {
+  constructor(expected, found, path2) {
     super();
     this.expected = expected;
     this.found = found;
-    this.path = path;
+    this.path = path2;
   }
 };
 function from(a2) {
@@ -1880,10 +1880,10 @@ var Text = class extends CustomType {
   }
 };
 var Element = class extends CustomType {
-  constructor(key, namespace, tag, attrs, children, self_closing, void$) {
+  constructor(key, namespace2, tag, attrs, children, self_closing, void$) {
     super();
     this.key = key;
-    this.namespace = namespace;
+    this.namespace = namespace2;
     this.tag = tag;
     this.attrs = attrs;
     this.children = children;
@@ -1947,6 +1947,9 @@ function element(tag, attrs, children) {
   } else {
     return new Element("", "", tag, attrs, children, false, false);
   }
+}
+function namespaced(namespace2, tag, attrs, children) {
+  return new Element("", namespace2, tag, attrs, children, false, false);
 }
 function text(content) {
   return new Text(content);
@@ -2025,9 +2028,9 @@ function morph(prev, next, dispatch, isComponent = false) {
   return out;
 }
 function createElementNode({ prev, next, dispatch, stack }) {
-  const namespace = next.namespace || "http://www.w3.org/1999/xhtml";
+  const namespace2 = next.namespace || "http://www.w3.org/1999/xhtml";
   const canMorph = prev && prev.nodeType === Node.ELEMENT_NODE && prev.localName === next.tag && prev.namespaceURI === (next.namespace || "http://www.w3.org/1999/xhtml");
-  const el2 = canMorph ? prev : namespace ? document.createElementNS(namespace, next.tag) : document.createElement(next.tag);
+  const el2 = canMorph ? prev : namespace2 ? document.createElementNS(namespace2, next.tag) : document.createElement(next.tag);
   let handlersForEl;
   if (!registeredHandlers.has(el2)) {
     const emptyHandlers = /* @__PURE__ */ new Map();
@@ -2172,14 +2175,14 @@ function lustreServerEventHandler(event) {
     tag,
     data: include.reduce(
       (data2, property) => {
-        const path = property.split(".");
-        for (let i = 0, o = data2, e = event; i < path.length; i++) {
-          if (i === path.length - 1) {
-            o[path[i]] = e[path[i]];
+        const path2 = property.split(".");
+        for (let i = 0, o = data2, e = event; i < path2.length; i++) {
+          if (i === path2.length - 1) {
+            o[path2[i]] = e[path2[i]];
           } else {
-            o[path[i]] ??= {};
-            e = e[path[i]];
-            o = o[path[i]];
+            o[path2[i]] ??= {};
+            e = e[path2[i]];
+            o = o[path2[i]];
           }
         }
         return data2;
@@ -2440,13 +2443,13 @@ function img(attrs) {
 
 // build/dev/javascript/gleam_stdlib/gleam/uri.mjs
 var Uri = class extends CustomType {
-  constructor(scheme, userinfo, host, port, path, query, fragment) {
+  constructor(scheme, userinfo, host, port, path2, query, fragment) {
     super();
     this.scheme = scheme;
     this.userinfo = userinfo;
     this.host = host;
     this.port = port;
-    this.path = path;
+    this.path = path2;
     this.query = query;
     this.fragment = fragment;
   }
@@ -2554,13 +2557,13 @@ function do_parse(uri_string) {
     if (matches.hasLength(8)) {
       let scheme2 = matches.tail.head;
       let authority_with_slashes = matches.tail.tail.head;
-      let path2 = matches.tail.tail.tail.tail.head;
+      let path3 = matches.tail.tail.tail.tail.head;
       let query_with_question_mark = matches.tail.tail.tail.tail.tail.head;
       let fragment2 = matches.tail.tail.tail.tail.tail.tail.tail.head;
       return [
         scheme2,
         authority_with_slashes,
-        path2,
+        path3,
         query_with_question_mark,
         fragment2
       ];
@@ -2570,11 +2573,11 @@ function do_parse(uri_string) {
   })();
   let scheme = $[0];
   let authority = $[1];
-  let path = $[2];
+  let path2 = $[2];
   let query = $[3];
   let fragment = $[4];
   let scheme$1 = noneify_empty_string(scheme);
-  let path$1 = unwrap(path, "");
+  let path$1 = unwrap(path2, "");
   let query$1 = noneify_query(query);
   let $1 = split_authority(authority);
   let userinfo = $1[0];
@@ -2634,8 +2637,8 @@ function do_remove_dot_segments(loop$input, loop$accumulator) {
 function remove_dot_segments(input) {
   return do_remove_dot_segments(input, toList([]));
 }
-function path_segments(path) {
-  return remove_dot_segments(split3(path, "/"));
+function path_segments(path2) {
+  return remove_dot_segments(split3(path2, "/"));
 }
 function to_string6(uri) {
   let parts = (() => {
@@ -2884,6 +2887,15 @@ function view_home(_) {
   );
 }
 
+// build/dev/javascript/lustre/lustre/element/svg.mjs
+var namespace = "http://www.w3.org/2000/svg";
+function svg(attrs, children) {
+  return namespaced(namespace, "svg", attrs, children);
+}
+function path(attrs) {
+  return namespaced(namespace, "path", attrs, toList([]));
+}
+
 // build/dev/javascript/gleam_http/gleam/http.mjs
 var Get = class extends CustomType {
 };
@@ -2951,7 +2963,7 @@ function scheme_from_string(scheme) {
 
 // build/dev/javascript/gleam_http/gleam/http/request.mjs
 var Request = class extends CustomType {
-  constructor(method, headers, body, scheme, host, port, path, query) {
+  constructor(method, headers, body, scheme, host, port, path2, query) {
     super();
     this.method = method;
     this.headers = headers;
@@ -2959,7 +2971,7 @@ var Request = class extends CustomType {
     this.scheme = scheme;
     this.host = host;
     this.port = port;
-    this.path = path;
+    this.path = path2;
     this.query = query;
   }
 };
@@ -3325,11 +3337,8 @@ var GithubProject = class extends CustomType {
 function build_full_name(org, name) {
   return org + "/" + name;
 }
-function mk_changes_link(name, org) {
+function mk_changes_url(name, org) {
   return "https://github.com/" + build_full_name(org, name) + "/pulls?q=is%3Apr+is%3Aclosed+author%3Amorucci+";
-}
-function mk_commits_link(name, org) {
-  return "https://github.com/" + build_full_name(org, name) + "/commits/?author=morucci";
 }
 function get_project(name, org) {
   debug("fetching remote infos for " + build_full_name(org, name));
@@ -3355,6 +3364,31 @@ function get_project(name, org) {
 }
 
 // build/dev/javascript/web/web/projects.mjs
+function change_svg() {
+  let xmlns = attribute("xmlns", "http://www.w3.org/2000/svg");
+  let width = attribute("width", "1em");
+  let height = attribute("height", "1em");
+  let viewbox = attribute("viewBox", "0 0 24 24");
+  let fill = attribute("fill", "currentColor");
+  let d1 = attribute(
+    "d",
+    "M16 19.25a3.25 3.25 0 1 1 6.5 0a3.25 3.25 0 0 1-6.5 0m-14.5 0a3.25 3.25 0 1 1 6.5 0a3.25 3.25 0 0 1-6.5 0m0-14.5a3.25 3.25 0 1 1 6.5 0a3.25 3.25 0 0 1-6.5 0M4.75 3a1.75 1.75 0 1 0 .001 3.501A1.75 1.75 0 0 0 4.75 3m0 14.5a1.75 1.75 0 1 0 .001 3.501A1.75 1.75 0 0 0 4.75 17.5m14.5 0a1.75 1.75 0 1 0 .001 3.501a1.75 1.75 0 0 0-.001-3.501"
+  );
+  let d2 = attribute(
+    "d",
+    "M13.405 1.72a.75.75 0 0 1 0 1.06L12.185 4h4.065A3.75 3.75 0 0 1 20 7.75v8.75a.75.75 0 0 1-1.5 0V7.75a2.25 2.25 0 0 0-2.25-2.25h-4.064l1.22 1.22a.75.75 0 0 1-1.061 1.06l-2.5-2.5a.75.75 0 0 1 0-1.06l2.5-2.5a.75.75 0 0 1 1.06 0M4.75 7.25A.75.75 0 0 1 5.5 8v8A.75.75 0 0 1 4 16V8a.75.75 0 0 1 .75-.75"
+  );
+  return svg(
+    toList([xmlns, width, height, viewbox]),
+    toList([path(toList([fill, d1])), path(toList([fill, d2]))])
+  );
+}
+function mk_changes_link(link) {
+  return a(
+    toList([class$("text-indigo-500"), href(link)]),
+    toList([change_svg()])
+  );
+}
 function list() {
   return toList([
     new GithubProject(
@@ -3379,7 +3413,9 @@ function list() {
       "https://www.softwarefactory-project.io",
       toList(["Ansible", "Python"]),
       "I'm working on this project with my co-workers. It is an infrastucture project and I used to provide improvements on the code base.",
-      new None(),
+      new Some(
+        "https://softwarefactory-project.io/r/q/(projects:%2522software-factory%2522+author:%2522Fabien+Boucher%2522+status:merged)+AND+NOT+project:software-factory/sf-operator"
+      ),
       new Work()
     ),
     new GithubProject(
@@ -3548,7 +3584,7 @@ function view_project(project) {
                 (() => {
                   if (contrib_link instanceof Some) {
                     let link = contrib_link[0];
-                    return mk_link(link, "(my changes)");
+                    return mk_changes_link(link);
                   } else {
                     return none2();
                   }
@@ -3602,20 +3638,14 @@ function view_project(project) {
                     return div(
                       toList([]),
                       toList([
-                        mk_link(
-                          mk_changes_link(name, org),
-                          "(my changes)"
-                        )
+                        mk_changes_link(mk_changes_url(name, org))
                       ])
                     );
                   } else if (show_changes instanceof Some && show_changes[0] instanceof Commits) {
                     return div(
                       toList([]),
                       toList([
-                        mk_link(
-                          mk_commits_link(name, org),
-                          "(my commits)"
-                        )
+                        mk_changes_link(mk_changes_url(name, org))
                       ])
                     );
                   } else {
