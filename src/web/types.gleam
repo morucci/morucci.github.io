@@ -31,6 +31,11 @@ pub type Ptype {
   Other
 }
 
+pub type Contrib {
+  Changes
+  Commits
+}
+
 // TODO: Add start and end date
 pub type Project {
   GenericProject(
@@ -47,7 +52,7 @@ pub type Project {
     org: String,
     contrib_desc: String,
     project_type: Ptype,
-    show_changes: Bool,
+    show_contrib: Option(Contrib),
     remote_info: Option(GitHubProjectRemoteInfo),
   )
 }

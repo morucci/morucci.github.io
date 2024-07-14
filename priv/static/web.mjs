@@ -3293,6 +3293,10 @@ var Work = class extends CustomType {
 };
 var Other = class extends CustomType {
 };
+var Changes = class extends CustomType {
+};
+var Commits = class extends CustomType {
+};
 var GenericProject = class extends CustomType {
   constructor(name, desc, repo_url, langs, contrib_desc, contrib_link, project_type) {
     super();
@@ -3306,13 +3310,13 @@ var GenericProject = class extends CustomType {
   }
 };
 var GithubProject = class extends CustomType {
-  constructor(name, org, contrib_desc, project_type, show_changes, remote_info) {
+  constructor(name, org, contrib_desc, project_type, show_contrib, remote_info) {
     super();
     this.name = name;
     this.org = org;
     this.contrib_desc = contrib_desc;
     this.project_type = project_type;
-    this.show_changes = show_changes;
+    this.show_contrib = show_contrib;
     this.remote_info = remote_info;
   }
 };
@@ -3321,8 +3325,11 @@ var GithubProject = class extends CustomType {
 function build_full_name(org, name) {
   return org + "/" + name;
 }
-function mk_github_contrib_link(name, org) {
-  return "https://github.com/" + org + "/" + name + "/pulls?q=is%3Apr+is%3Aclosed+author%3Amorucci+";
+function mk_changes_link(name, org) {
+  return "https://github.com/" + build_full_name(org, name) + "/pulls?q=is%3Apr+is%3Aclosed+author%3Amorucci+";
+}
+function mk_commits_link(name, org) {
+  return "https://github.com/" + build_full_name(org, name) + "/commits/?author=morucci";
 }
 function get_project(name, org) {
   debug("fetching remote infos for " + build_full_name(org, name));
@@ -3355,7 +3362,7 @@ function list() {
       "change-metrics",
       "I started this project and I'm on of the main contributors of this project. The project has been initially started in Python, then for the fun and with the help of a colleague we migrated the code to Haskell.",
       new Owner(),
-      true,
+      new Some(new Changes()),
       new None()
     ),
     new GithubProject(
@@ -3363,7 +3370,7 @@ function list() {
       "morucci",
       "I started this project and was the main contribution on it",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GenericProject(
@@ -3380,7 +3387,7 @@ function list() {
       "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
       new Work(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GenericProject(
@@ -3399,7 +3406,7 @@ function list() {
       "web-apps-lab",
       "Wanted to challenge myself to leverage HTMX via ButlerOS.",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GithubProject(
@@ -3407,7 +3414,7 @@ function list() {
       "web-apps-lab",
       "A second game after HazardHunter and because it was fun to build.",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GithubProject(
@@ -3415,7 +3422,7 @@ function list() {
       "morucci",
       "A challenge to learn more about Haskell, the Brick engine and capability to have the whole game logic handled server side and the terminal UI to be just a dumb display.",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GithubProject(
@@ -3423,7 +3430,7 @@ function list() {
       "morucci",
       "This is a learning project around Haskell and HTMX.",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GithubProject(
@@ -3431,7 +3438,7 @@ function list() {
       "morucci",
       "A little project I've wrote mainly to learn about OCaml.",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GenericProject(
@@ -3450,7 +3457,7 @@ function list() {
       "morucci",
       "Project I wrote due to a need to plot system processes resources consumption",
       new Owner(),
-      false,
+      new Some(new Commits()),
       new None()
     ),
     new GenericProject(
@@ -3491,7 +3498,7 @@ function list() {
       "jelmer",
       "I contributed a GIT store backend based on an OpenStack Swift object store.",
       new Other(),
-      false,
+      new Some(new Changes()),
       new None()
     ),
     new GithubProject(
@@ -3499,7 +3506,7 @@ function list() {
       "ButlerOS",
       "I contributed a login system based on OpenID Connect.",
       new Other(),
-      false,
+      new Some(new Changes()),
       new None()
     )
   ]);
@@ -3541,7 +3548,7 @@ function view_project(project) {
                 (() => {
                   if (contrib_link instanceof Some) {
                     let link = contrib_link[0];
-                    return mk_link(link, "(changes)");
+                    return mk_link(link, "(my changes)");
                   } else {
                     return none2();
                   }
@@ -3573,7 +3580,7 @@ function view_project(project) {
     let name = project.name;
     let org = project.org;
     let contrib_desc = project.contrib_desc;
-    let show_changes = project.show_changes;
+    let show_changes = project.show_contrib;
     let ri = project.remote_info[0];
     return div(
       toList([]),
@@ -3591,11 +3598,24 @@ function view_project(project) {
               toList([class$("flex flex-row gap-2")]),
               toList([
                 (() => {
-                  if (show_changes) {
+                  if (show_changes instanceof Some && show_changes[0] instanceof Changes) {
                     return div(
                       toList([]),
                       toList([
-                        mk_link(mk_github_contrib_link(name, org), "(changes)")
+                        mk_link(
+                          mk_changes_link(name, org),
+                          "(my changes)"
+                        )
+                      ])
+                    );
+                  } else if (show_changes instanceof Some && show_changes[0] instanceof Commits) {
+                    return div(
+                      toList([]),
+                      toList([
+                        mk_link(
+                          mk_commits_link(name, org),
+                          "(my commits)"
+                        )
                       ])
                     );
                   } else {
@@ -3795,7 +3815,7 @@ function update(model, msg) {
         let org = project.org;
         let contrib_desc = project.contrib_desc;
         let owner = project.project_type;
-        let show_changes = project.show_changes;
+        let show_changes = project.show_contrib;
         let $ = org + "/" + name === remote_project_info.full_name;
         if ($) {
           return new GithubProject(

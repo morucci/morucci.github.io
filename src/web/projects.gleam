@@ -7,10 +7,10 @@ import lustre/attribute.{class}
 import lustre/effect.{type Effect}
 import lustre/element.{none}
 import lustre/element/html.{div, h2, text}
-import web/github.{mk_github_contrib_link}
+import web/github
 import web/types.{
-  type Model, type Msg, type Project, GenericProject, GithubProject, Other,
-  Owner, Work,
+  type Model, type Msg, type Project, Changes, Commits, GenericProject,
+  GithubProject, Other, Owner, Work,
 }
 import web/utils.{mk_link, mk_page_title}
 
@@ -23,7 +23,7 @@ pub fn list() -> List(Project) {
         <> "The project has been initially started in Python, then for the fun and "
         <> "with the help of a colleague we migrated the code to Haskell.",
       Owner,
-      True,
+      Some(Changes),
       None,
     ),
     GithubProject(
@@ -31,7 +31,7 @@ pub fn list() -> List(Project) {
       "morucci",
       "I started this project and was the main contribution on it",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GenericProject(
@@ -50,7 +50,7 @@ pub fn list() -> List(Project) {
       "softwarefactory-project",
       "I'm currently actively working on that project with the help of my co-workers.",
       Work,
-      False,
+      Some(Commits),
       None,
     ),
     GenericProject(
@@ -69,7 +69,7 @@ pub fn list() -> List(Project) {
       "web-apps-lab",
       "Wanted to challenge myself to leverage HTMX via ButlerOS.",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GithubProject(
@@ -77,7 +77,7 @@ pub fn list() -> List(Project) {
       "web-apps-lab",
       "A second game after HazardHunter and because it was fun to build.",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GithubProject(
@@ -85,7 +85,7 @@ pub fn list() -> List(Project) {
       "morucci",
       "A challenge to learn more about Haskell, the Brick engine and capability to have the whole game logic handled server side and the terminal UI to be just a dumb display.",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GithubProject(
@@ -93,7 +93,7 @@ pub fn list() -> List(Project) {
       "morucci",
       "This is a learning project around Haskell and HTMX.",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GithubProject(
@@ -101,7 +101,7 @@ pub fn list() -> List(Project) {
       "morucci",
       "A little project I've wrote mainly to learn about OCaml.",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GenericProject(
@@ -118,7 +118,7 @@ pub fn list() -> List(Project) {
       "morucci",
       "Project I wrote due to a need to plot system processes resources consumption",
       Owner,
-      False,
+      Some(Commits),
       None,
     ),
     GenericProject(
@@ -159,7 +159,7 @@ pub fn list() -> List(Project) {
       "jelmer",
       "I contributed a GIT store backend based on an OpenStack Swift object store.",
       Other,
-      False,
+      Some(Changes),
       None,
     ),
     GithubProject(
@@ -167,7 +167,7 @@ pub fn list() -> List(Project) {
       "ButlerOS",
       "I contributed a login system based on OpenID Connect.",
       Other,
-      False,
+      Some(Changes),
       None,
     ),
   ]
@@ -204,7 +204,7 @@ fn view_project(project: Project) {
           mk_link(repo_url, name),
           div([class("flex flex-row gap-2")], [
             case contrib_link {
-              Some(link) -> mk_link(link, "(changes)")
+              Some(link) -> mk_link(link, "(my changes)")
               None -> none()
             },
             div([], [langs |> string.join("/") |> text]),
@@ -224,11 +224,15 @@ fn view_project(project: Project) {
           ]),
           div([class("flex flex-row gap-2")], [
             case show_changes {
-              True ->
+              Some(Changes) ->
                 div([], [
-                  mk_link(mk_github_contrib_link(name, org), "(changes)"),
+                  mk_link(github.mk_changes_link(name, org), "(my changes)"),
                 ])
-              False -> none()
+              Some(Commits) ->
+                div([], [
+                  mk_link(github.mk_commits_link(name, org), "(my commits)"),
+                ])
+              None -> none()
             },
             div([], [text(ri.stars |> int.to_string <> "⭐")]),
             div([], [text(ri.language)]),
