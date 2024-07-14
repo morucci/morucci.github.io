@@ -1,5 +1,6 @@
 import gleam/option.{type Option}
 import lustre_http.{type HttpError}
+import rada/date.{type Date}
 
 pub type GitHubProjectRemoteInfo {
   GitHubProjectRemoteInfo(
@@ -55,4 +56,8 @@ pub type Project {
     show_contrib: Option(Contrib),
     remote_info: Option(GitHubProjectRemoteInfo),
   )
+}
+
+pub type Article {
+  Article(name: String, url: String, date: Date)
 }
