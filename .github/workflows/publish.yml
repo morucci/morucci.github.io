@@ -34,6 +34,10 @@ jobs:
           mkdir _site
           cp -r priv/static _site/
           cp index-prod.html _site/index.html
+          cd _site
+          # https://github.com/isaacs/github/issues/408
+          # https://stackoverflow.com/questions/36296012/is-there-a-configuration-in-github-pages-that-allows-you-to-redirect-everything
+          ln -s index.html 404.html
       - name: Upload artifacts
         uses: actions/upload-pages-artifact@v3
 
