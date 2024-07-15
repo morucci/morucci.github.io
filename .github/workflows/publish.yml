@@ -32,7 +32,7 @@ jobs:
       - name: Copy files
         run: |
           mkdir _site
-          cp -r priv/static/* _site/
+          cp -r priv/static _site/
           cp index-prod.html _site/index.html
       - name: Upload artifacts
         uses: actions/upload-pages-artifact@v3
