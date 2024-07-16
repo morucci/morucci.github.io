@@ -4,7 +4,7 @@ import web/utils.{mk_link, mk_page_title}
 
 pub fn view_home(_model) {
   div([], [
-    mk_page_title("Welcome on my web page"),
+    mk_page_title("Welcome to My Website!"),
     div([class("flex flex-col gap-2")], [
       div([class("self-center")], [
         img([
@@ -15,15 +15,13 @@ pub fn view_home(_model) {
       div([class("flex flex-col gap-2")], [
         p([], [
           text(
-            "My name is Fabien Boucher, I'm currenlty working for Red Hat as a Principal Software Engineer.",
-          ),
-          text(
-            " At work, I maintain the production chain CI infrastructure for OSP (the Red Hat OpenStack Platform) and for",
+            "Hello I'm Fabien Boucher, I currently work as a Principal Software Engineer at Red Hat"
+            <> " where I maintain the CI infrastructure for Red Hat OpenStack Platform (OSP) and for",
           ),
           mk_link("https://www.rdoproject.org", " RDO"),
           text(". I contribute to"),
           mk_link("/projects", " various Open Source projects "),
-          text("for work and during my free time."),
+          text("both professionally and in my free time."),
         ]),
       ]),
     ]),
